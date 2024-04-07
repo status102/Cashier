@@ -1,0 +1,17 @@
+{
+  "Author": "status102",
+  "Name": "Cashier",
+  "Punchline": "根据预期价格计算预期交易金额，并记录交易历史",
+  "Description": "根据预期价格计算预期交易金额，并记录交易历史",
+  "ApplicableVersion": "any",
+  "RepoUrl": "https://github.com/status102/TradeRecorder",
+  "Tags": [
+    "Trade",
+    "MarketBoard",
+    "RetainerSell"
+  ],
+  "ImageUrls": [
+    "https://github.com/status102/TradeRecorder/raw/master/Image/History.png",
+    "https://github.com/status102/TradeRecorder/raw/master/Image/Setting.png"
+  ]
+}
