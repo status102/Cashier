@@ -4,7 +4,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace TradeRecorder.Universalis.API
+namespace Cashier.Universalis.API
 {
 	/// <summary>
 	/// Universalis API Client.

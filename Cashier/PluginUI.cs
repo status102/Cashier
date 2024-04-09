@@ -8,10 +8,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Text;
-using TradeRecorder.Common;
-using TradeRecorder.Window;
+using Cashier.Commons;
+using Cashier.Windows;
 
-namespace TradeRecorder
+namespace Cashier
 {
     public unsafe class PluginUI : IDisposable
 	{
@@ -29,7 +29,7 @@ namespace TradeRecorder
 
 		public StreamWriter? networkMessageWriter;
 
-		public unsafe PluginUI(TradeRecorder TradeRecorder, Configuration configuration) {
+		public unsafe PluginUI(Cashier TradeRecorder, Configuration configuration) {
 			this.config = configuration;
 			Trade = new(TradeRecorder);
 			History = new(TradeRecorder);
@@ -53,8 +53,8 @@ namespace TradeRecorder
 				networkMessageWriter.Flush();
 				networkMessageWriter.Close();
 			}
-			foreach (TextureWrap? icon in iconList.Values) { icon?.Dispose(); }
-			foreach (TextureWrap? icon in hqIconList.Values) { icon?.Dispose(); }
+			foreach (IDalamudTextureWrap? icon in iconList.Values) { icon?.Dispose(); }
+			foreach (IDalamudTextureWrap? icon in hqIconList.Values) { icon?.Dispose(); }
 		}
 
 		public void Draw() {
@@ -103,7 +103,8 @@ namespace TradeRecorder
 		}
 		private static IDalamudTextureWrap? GetIconStr(uint iconId, bool isHQ) {
 			//"ui/icon/{0:D3}000/{1}{2:D6}.tex";
-			return Svc.TextureProvider.GetTextureFromGame(string.Format("ui/icon/{0:D3}000/{1}{2:D6}_hr1.tex", iconId / 1000u, isHQ ? "hq/" : "", iconId));
+			return null;
+			//return Svc.TextureProvider.GetTextureFromGame(string.Format("ui/icon/{0:D3}000/{1}{2:D6}_hr1.tex", iconId / 1000u, isHQ ? "hq/" : "", iconId));
 		}
 	}
 }

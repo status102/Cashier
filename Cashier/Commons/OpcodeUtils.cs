@@ -7,9 +7,9 @@ using System.Runtime.InteropServices;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
-using TradeRecorder.Model;
+using Cashier.Model;
 
-namespace TradeRecorder.Common
+namespace Cashier.Commons
 {
 	public class OpcodeUtils
 	{

@@ -1,10 +1,10 @@
 ﻿using Dalamud.Logging;
 using Lumina.Excel.GeneratedSheets;
 using System.Linq;
-using TradeRecorder.Common;
-using TradeRecorder.Universalis;
+using Cashier.Commons;
+using Cashier.Universalis;
 
-namespace TradeRecorder.Model
+namespace Cashier.Model
 {
     public class TradeItem
 	{
@@ -32,7 +32,7 @@ namespace TradeRecorder.Model
 				IconId = item.Icon;
 				Name = item.Name;
 				StackSize = item.StackSize;
-				ItemPreset = TradeRecorder.Instance?.Config.PresetList.FirstOrDefault(i => i.Name == Name && i.Quality == Quality);
+				ItemPreset = Cashier.Instance?.Config.PresetList.FirstOrDefault(i => i.Name == Name && i.Quality == Quality);
 			}
 			ItemPrice = Price.GetItem(id);
 		}

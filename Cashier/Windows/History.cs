@@ -1,5 +1,4 @@
 ﻿using Dalamud.Interface.ImGuiFileDialog;
-using Dalamud.Logging;
 using ImGuiNET;
 using System;
 using System.Collections.Generic;
@@ -8,32 +7,33 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
-using TradeRecorder.Common;
-using TradeRecorder.Model;
+using Cashier.Commons;
+using Cashier.Model;
 
-namespace TradeRecorder.Window
+namespace Cashier.Windows
 {
-    public class History : IWindow
+	public class History : IWindow
 	{
 		/// <summary>
 		/// 导出交易记录表的列名
 		/// </summary>
-		private static readonly string[] Title = { "时间", "交易状态", "交易对象", "支付金额", "接收金额", "支付物品", "接收物品" };
+		private static readonly string[] Title = ["时间", "交易状态", "交易对象", "支付金额", "接收金额", "支付物品", "接收物品"];
 		private static readonly Vector2 Img_Size = new(26, 26);
 		/// <summary>
 		/// historyList被修改
 		/// </summary>
 		private bool isHistoryChanged = false;
 		private FileDialog? fileDialog;
-		private List<TradeHistory> historyList = new();
-		private HashSet<string> historyTargetSet = new() { };
-		private List<TradeHistory> showList = new();
+		private List<TradeHistory> historyList = [];
+		private HashSet<string> historyTargetSet = [];
+		private List<TradeHistory> showList = [];
 
-		private readonly TradeRecorder tradeRecorder;
+		private readonly Cashier tradeRecorder;
 		private bool visible = false;
 		private string? target = null;
 
-		public void Draw() {
+		public void Draw()
+		{
 			if (!visible) {
 				if (isHistoryChanged) {
 					isHistoryChanged = false;
@@ -91,7 +91,8 @@ namespace TradeRecorder.Window
 
 		}
 
-		public void ShowHistory(string? target = null) {
+		public void ShowHistory(string? target = null)
+		{
 			if (!visible) {
 				visible = true;
 			} else {
@@ -114,9 +115,12 @@ namespace TradeRecorder.Window
 		/// </summary>
 		/// <param name="index"></param>
 		/// <param name="tradeItem"></param>
-		private void DrawHistory(int index, TradeHistory tradeItem) {
+		private void DrawHistory(int index, TradeHistory tradeItem)
+		{
 			var title = $"{index + 1}:  {tradeItem.Time}  <{tradeItem.Target}>";
-			if (!tradeItem.Status) { title += "  (取消)"; }
+			if (!tradeItem.Status) {
+				title += "  (取消)";
+			}
 			var expansion = ImGui.CollapsingHeader(title.ToString(), ref tradeItem.visible);
 			// 如果处于显示状态，则绘制本次交易的净金币进出
 			if (tradeItem.visible) {
@@ -172,10 +176,13 @@ namespace TradeRecorder.Window
 				}
 			}
 			// 有记录需要删除
-			if (!tradeItem.visible) { isHistoryChanged = true; }
+			if (!tradeItem.visible) {
+				isHistoryChanged = true;
+			}
 		}
 
-		public void AddHistory(bool status, string target, uint[] gil, TradeItem[][] items) {
+		public void AddHistory(bool status, string target, uint[] gil, TradeItem[][] items)
+		{
 			if (Svc.ClientState.LocalPlayer == null) {
 				Chat.PrintError("历史记录追加失败，Player为空");
 				return;
@@ -183,7 +190,8 @@ namespace TradeRecorder.Window
 			var giveList = items[0].Select(i => new TradeHistory.HistoryItem(i.IconId ?? 0, i.Name ?? "<Unknown>", i.Count, i.Quality)).ToArray();
 			var receiviList = items[1].Select(i => new TradeHistory.HistoryItem(i.IconId ?? 0, i.Name ?? "<Unknown>", i.Count, i.Quality)).ToArray();
 
-			TradeHistory tradeHistory = new() {
+			TradeHistory tradeHistory = new()
+			{
 				Status = status,
 				Target = target,
 				GiveGil = gil[0],
@@ -197,13 +205,14 @@ namespace TradeRecorder.Window
 			isHistoryChanged = true;
 		}
 
-		private void ReadHistory() {
+		private void ReadHistory()
+		{
 			if (Svc.ClientState.LocalPlayer == null) { return; }
 			var playerName = Svc.ClientState.LocalPlayer!.Name.TextValue;
 			var playerWorld = Svc.ClientState.LocalPlayer!.HomeWorld.GameData!.Name.RawString;
 
-			historyList = new();
-			historyTargetSet = new();
+			historyList = [];
+			historyTargetSet = [];
 			string path = Path.Join(tradeRecorder.PluginInterface.ConfigDirectory.FullName, $"{playerWorld}_{playerName}.txt");
 
 			using (StreamReader reader = new(File.Open(path, FileMode.OpenOrCreate))) {
@@ -223,25 +232,26 @@ namespace TradeRecorder.Window
 			}
 		}
 
-		private void SaveHistory() {
+		private void SaveHistory()
+		{
 			if (Svc.ClientState.LocalPlayer == null) { return; }
 			var playerName = Svc.ClientState.LocalPlayer!.Name.TextValue;
 			var playerWorld = Svc.ClientState.LocalPlayer!.HomeWorld.GameData!.Name.RawString;
 
-			using (FileStream stream = File.Open(Path.Join(tradeRecorder.PluginInterface.ConfigDirectory.FullName, $"{playerWorld}_{playerName}.txt"), FileMode.Create)) {
-				StreamWriter writer = new(stream);
-				foreach (TradeHistory tradeHistory in historyList) {
-					if (tradeHistory.visible) { writer.WriteLine(tradeHistory.ToString()); }
-				}
-				writer.Flush();
+			using FileStream stream = File.Open(Path.Join(tradeRecorder.PluginInterface.ConfigDirectory.FullName, $"{playerWorld}_{playerName}.txt"), FileMode.Create);
+			StreamWriter writer = new(stream);
+			foreach (TradeHistory tradeHistory in historyList) {
+				if (tradeHistory.visible) { writer.WriteLine(tradeHistory.ToString()); }
 			}
+			writer.Flush();
 		}
 
 		/// <summary>
 		/// 导出当前角色所有交易记录
 		/// </summary>
 		/// <param name="path">保存路径</param>
-		private void ExportHistory(string path) {
+		private void ExportHistory(string path)
+		{
 			if (Svc.ClientState.LocalPlayer == null) { return; }
 			Svc.PluginLog.Information($"[{tradeRecorder.Name}]保存交易历史: {path}");
 
@@ -255,13 +265,12 @@ namespace TradeRecorder.Window
 					string.Join(',', i.receiveItemArray.Select(i => i.ToString()))
 				}).ToList();
 			try {
-				using (StreamWriter writer = new(File.Open(path, FileMode.Create), Encoding.UTF8)) {
-					// 写入标题
-					writer.WriteLine(string.Join(",", Title.Select(str => $"\"{str}\"").ToList()));
+				using StreamWriter writer = new(File.Open(path, FileMode.Create), Encoding.UTF8);
+				// 写入标题
+				writer.WriteLine(string.Join(",", Title.Select(str => $"\"{str}\"").ToList()));
 
-					saveList.ForEach(i => writer.WriteLine(string.Join(",", i.Select(str => $"\"{str}\"").ToList())));
-					writer.Flush();
-				}
+				saveList.ForEach(i => writer.WriteLine(string.Join(",", i.Select(str => $"\"{str}\"").ToList())));
+				writer.Flush();
 			} catch (IOException e) {
 				Svc.PluginLog.Error(e.ToString());
 			}
@@ -273,7 +282,8 @@ namespace TradeRecorder.Window
 		/// 删除与指定角色交易记录
 		/// </summary>
 		/// <param name="target">需要删除的交易对象，为空时删除全部</param>
-		private void ClearHistory(string? target = null) {
+		private void ClearHistory(string? target = null)
+		{
 			if (Svc.ClientState.LocalPlayer == null) {
 				Svc.PluginLog.Warning("获取角色信息失败，无法获取交易记录");
 				return;
@@ -293,11 +303,13 @@ namespace TradeRecorder.Window
 		}
 
 		#region init
-		public History(TradeRecorder tradeRecorder) {
+		public History(Cashier tradeRecorder)
+		{
 			this.tradeRecorder = tradeRecorder;
 			Task.Run(() => ReadHistory());
 		}
-		public void Dispose() {
+		public void Dispose()
+		{
 			if (isHistoryChanged) { SaveHistory(); }
 		}
 		#endregion

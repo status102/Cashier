@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace TradeRecorder.Model
+namespace Cashier.Model
 {
 	public class Opcodes
 	{

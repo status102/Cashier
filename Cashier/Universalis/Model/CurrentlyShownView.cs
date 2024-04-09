@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace TradeRecorder.Universalis
+namespace Cashier.Universalis
 {
 	public class CurrentlyShownView
 	{

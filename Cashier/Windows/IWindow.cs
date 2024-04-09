@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace TradeRecorder.Window
+namespace Cashier.Windows
 {
 	public interface IWindow : IDisposable
 	{

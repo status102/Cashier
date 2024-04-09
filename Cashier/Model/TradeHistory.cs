@@ -4,9 +4,9 @@ using ImGuiScene;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TradeRecorder.Common;
+using Cashier.Commons;
 
-namespace TradeRecorder.Model
+namespace Cashier.Model
 {
     public class TradeHistory
 	{

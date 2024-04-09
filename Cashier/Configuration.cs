@@ -3,9 +3,9 @@ using Dalamud.Plugin;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using TradeRecorder.Model;
+using Cashier.Model;
 
-namespace TradeRecorder
+namespace Cashier
 {
 	[Serializable]
 	public class Configuration : IPluginConfiguration

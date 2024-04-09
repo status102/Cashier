@@ -10,11 +10,11 @@ using System.Linq;
 using System.Net.Http;
 using System.Numerics;
 using System.Threading.Tasks;
-using TradeRecorder.Common;
-using TradeRecorder.Model;
-using TradeRecorder.Universalis;
+using Cashier.Commons;
+using Cashier.Model;
+using Cashier.Universalis;
 
-namespace TradeRecorder.Window
+namespace Cashier.Windows
 {
 	public class Setting : IWindow
 	{
@@ -22,7 +22,7 @@ namespace TradeRecorder.Window
 		private readonly static Vector2 IMAGE_SIZE = new(54, 54);
 		private const int ITEM_WIDTH = 190, ITEM_INTERNAL = 5;
 
-		private readonly TradeRecorder tradeRecorder;
+		private readonly Cashier tradeRecorder;
 		private Configuration Config => tradeRecorder.Config;
 
 		private bool visible = false;
@@ -42,7 +42,7 @@ namespace TradeRecorder.Window
 		private uint worldId => tradeRecorder.homeWorldId;
 
 		private static IDalamudTextureWrap? FailureImage => PluginUI.GetIcon(784);
-		public Setting(TradeRecorder tradeRecorder) { this.tradeRecorder = tradeRecorder; }
+		public Setting(Cashier tradeRecorder) { this.tradeRecorder = tradeRecorder; }
 
 		public void Show() { visible = !visible; }
 		public void Draw()
@@ -439,20 +439,20 @@ namespace TradeRecorder.Window
 					} else {
 						var client = opcodeInfo.Lists.ClientZoneIpcType;
 						var server = opcodeInfo.Lists.ServerZoneIpcType;
-						var inventoryModifyHandler = client.FirstOrDefault(i => i.Name.Equals("InventoryModifyHandler"))?.Opcode;
+						var inventoryModifyHandler = client.FirstOrDefault(i => i.Name == "InventoryModifyHandler")?.Opcode;
 						if (inventoryModifyHandler != null) { Config.OpcodeOfInventoryModifyHandler = (ushort)inventoryModifyHandler; }
 
-						var itemInfo = client.FirstOrDefault(i => i.Name.Equals("ItemInfo"))?.Opcode;
+						var itemInfo = server.FirstOrDefault(i => i.Name == "ItemInfo")?.Opcode;
 						if (itemInfo != null) { Config.OpcodeOfItemInfo = (ushort)itemInfo; }
 
-						var currencyCrystalInfo = client.FirstOrDefault(i => i.Name.Equals("CurrencyCrystalInfo"))?.Opcode;
+						var currencyCrystalInfo = server.FirstOrDefault(i => i.Name == "CurrencyCrystalInfo")?.Opcode;
 						if (currencyCrystalInfo != null) { Config.OpcodeOfCurrencyCrystalInfo = (ushort)currencyCrystalInfo; }
 
-						var updateInventorySlot = client.FirstOrDefault(i => i.Name.Equals("UpdateInventorySlot"))?.Opcode;
+						var updateInventorySlot = server.FirstOrDefault(i => i.Name == "UpdateInventorySlot")?.Opcode;
 						if (updateInventorySlot != null) { Config.OpcodeOfUpdateInventorySlot = (ushort)updateInventorySlot; }
 
 						if (inventoryModifyHandler == null || itemInfo == null || currencyCrystalInfo == null || updateInventorySlot == null) {
-							Chat.PrintWarning($"部分Opcode自动更新失败，请手动更新Opcode");
+							Chat.PrintWarning($"部分Opcode自动更新失败，请手动更新Opcode\ninventoryModifyHandler:{inventoryModifyHandler}\nitemInfo:{itemInfo}\ncurrencyCrystalInfo:{currencyCrystalInfo}\nupdateInventorySlot:{updateInventorySlot}");
 						} else {
 							Config.Save();
 							Chat.PrintLog($"已将部分Opcode更新至{opcodeInfo.Region}服务器<{opcodeInfo.Version}版本>");

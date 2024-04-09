@@ -1,4 +1,8 @@
-﻿using Dalamud.Game.Addon.Lifecycle;
+﻿using Cashier.Commons;
+using Cashier.Model;
+using Cashier.Model.FFXIV;
+using Cashier.Universalis;
+using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.Network;
@@ -8,8 +12,12 @@ using Dalamud.Game.Text.SeStringHandling.Payloads;
 using Dalamud.Interface;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Internal;
+using ECommons;
 using ECommons.Automation;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using FFXIVClientStructs.FFXIV.Client.Game.Control;
+using FFXIVClientStructs.FFXIV.Client.Game.Object;
+using FFXIVClientStructs.FFXIV.Client.System.Framework;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
@@ -19,16 +27,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices;
-using TradeRecorder.Common;
-using TradeRecorder.Model;
-using TradeRecorder.Model.FFXIV;
-using TradeRecorder.Universalis;
+using static Cashier.Commons.AgentEventHandlerHook;
+using static Dalamud.Interface.Utility.Raii.ImRaii;
+using ObjectKind = Dalamud.Game.ClientState.Objects.Enums.ObjectKind;
+using ValueType = FFXIVClientStructs.FFXIV.Component.GUI.ValueType;
 
-namespace TradeRecorder.Window
+namespace Cashier.Windows
 {
-	public class Trade
+	public unsafe class Trade
 	{
-		private TradeRecorder tradeRecorder { get; init; }
+		private Cashier tradeRecorder { get; init; }
+		private ECommons.Automation.TaskManager TaskManager => Cashier.TaskManager!;
 		/// <summary>
 		/// 窗口大小
 		/// </summary>
@@ -44,7 +53,7 @@ namespace TradeRecorder.Window
 		private readonly static float[] ColumnWidth = [26, -1, 42, 80, 80];
 		private const int RowWidth = 30;
 		private readonly static Vector2 ImageSize = new(26, 26);
-		private IDalamudTextureWrap? GilImage => PluginUI.GetIcon(65002);
+		private Lazy<IDalamudTextureWrap?> GilImage = new(PluginUI.GetIcon(65002));
 
 
 		/// <summary>
@@ -84,27 +93,43 @@ namespace TradeRecorder.Window
 		}
 		private uint[] multiGil = [0, 0];
 		private uint worldId = 0;
+		/// <summary>
+		/// 交易目标
+		/// </summary>
 		private (uint, string, string) target = (0, "", "");
+		/// <summary>
+		/// 上次交易目标，用于判断是否连续交易
+		/// </summary>
 		private (uint, string, string) lastTarget = (0, "", "");
 		/// <summary>
 		/// 对方交易栏的发包序号，序号步进后需要清空道具栏
 		/// </summary>
 		private ushort targetRound = 0;
 		private readonly object targetRoundLock = new();
+		private AgentEventHandlerHook hook;
+		private AgentTrade agentTrade;
+		private AtkUnitBase* addonTrade;
+		private nint targetObjectId;
 
 		#region Init
 		private DalamudLinkPayload Payload { get; init; }
 		private Configuration Config => tradeRecorder.Config;
-		public Trade(TradeRecorder tradeRecorder)
+		public Trade(Cashier tradeRecorder)
 		{
 			this.tradeRecorder = tradeRecorder;
 			Svc.GameNetwork.NetworkMessage += NetworkMessageDelegate;
 			Payload = tradeRecorder.PluginInterface.AddChatLinkHandler(0, OnTradeTargetClick);
+			hook = new(AgentId.Trade, TradeCallback);
+
+			nint aa = (nint)AgentModule.Instance()->GetAgentByInternalId(AgentId.Trade);
+			agentTrade = Marshal.PtrToStructure<AgentTrade>(aa);
 		}
+
 		public void Dispose()
 		{
 			Svc.GameNetwork.NetworkMessage -= NetworkMessageDelegate;
 			tradeRecorder.PluginInterface.RemoveChatLinkHandler(0);
+			hook.Dispose();
 		}
 		#endregion
 		public unsafe void Draw()
@@ -167,6 +192,7 @@ namespace TradeRecorder.Window
 				ImGui.End();
 			}
 		}
+
 		/// <summary>
 		/// 绘制交易道具表
 		/// </summary>
@@ -252,7 +278,7 @@ namespace TradeRecorder.Window
 				ImGui.TableNextRow(ImGuiTableRowFlags.None, RowWidth);
 				ImGui.TableNextColumn();
 
-				if (GilImage != null) { ImGui.Image(GilImage.ImGuiHandle, ImageSize); }
+				if (GilImage != null) { ImGui.Image(GilImage.Value.ImGuiHandle, ImageSize); }
 
 				ImGui.TableNextColumn();
 				ImGui.TextUnformatted($"{gil:#,0}");
@@ -435,7 +461,9 @@ namespace TradeRecorder.Window
 			} else {
 				Svc.ChatGui.Print(BuildTradeSeString(Payload, status, target, list, gil).BuiltString);
 			}
-			if (status) { lastTarget = target; }
+			if (status) {
+				lastTarget = target;
+			}
 		}
 
 		/// <summary>
@@ -473,22 +501,22 @@ namespace TradeRecorder.Window
 		private unsafe void NetworkMessageDelegate(IntPtr dataPtr, ushort opcode, uint sourceActorId, uint targetActorId, NetworkMessageDirection direction)
 		{
 			if (trading) {
-				if (direction == NetworkMessageDirection.ZoneUp && opcode == Config.OpcodeOfInventoryModifyHandler) {
+				if (opcode == Config.OpcodeOfInventoryModifyHandler) {
 					UpdateMyTradeSlot(Marshal.PtrToStructure<InventoryModifyHandler>(dataPtr));
-				} else if (direction == NetworkMessageDirection.ZoneDown && opcode == Config.OpcodeOfItemInfo) {
+				} else if (opcode == Config.OpcodeOfItemInfo) {
 					byte[] bytes = new byte[0x21];
 					Marshal.Copy(dataPtr, bytes, 0, bytes.Length);
 					UpdateOtherTradeItem(bytes);
-				} else if (direction == NetworkMessageDirection.ZoneDown && opcode == Config.OpcodeOfCurrencyCrystalInfo) {
+				} else if (opcode == Config.OpcodeOfCurrencyCrystalInfo) {
 					byte[] bytes = new byte[0x12];
 					Marshal.Copy(dataPtr, bytes, 0, bytes.Length);
 					UpdateOtherTradeMoney(bytes);
-				} else if (direction == NetworkMessageDirection.ZoneDown && opcode == Config.OpcodeOfUpdateInventorySlot) {
+				} else if (opcode == Config.OpcodeOfUpdateInventorySlot) {
 					// 背包变动，交易成功且有物品进出
 					success = true;
 				}
 			} else {
-				if (direction == NetworkMessageDirection.ZoneDown && opcode == Config.OpcodeOfTradeTargetInfo) {
+				if (opcode == Config.OpcodeOfTradeTargetInfo) {
 					byte[] bytes = new byte[45];
 					Marshal.Copy(dataPtr, bytes, 0, bytes.Length);
 					ReceiveTargetID(bytes);
@@ -507,10 +535,10 @@ namespace TradeRecorder.Window
 		private static SeStringBuilder BuildTradeSeString(DalamudLinkPayload payload, bool status, (uint, string, string) target, TradeItem[][] items, uint[] gil)
 		{
 			if (items.Length == 0 || gil.Length == 0) {
-				return new SeStringBuilder().AddText($"[{TradeRecorder.PluginName}]").AddUiForeground("获取交易内容失败", 17);
+				return new SeStringBuilder().AddText($"[{Cashier.PluginName}]").AddUiForeground("获取交易内容失败", 17);
 			}
 			var builder = new SeStringBuilder()
-				.AddUiForeground($"[{TradeRecorder.PluginName}]", 45)
+				.AddUiForeground($"[{Cashier.PluginName}]", 45)
 				.AddText(SeIconChar.ArrowRight.ToIconString())
 				.Add(payload)
 				.AddUiForeground(1).Add(new PlayerPayload(target.Item2, target.Item1)).AddUiForegroundOff();
@@ -562,7 +590,7 @@ namespace TradeRecorder.Window
 		private static SeStringBuilder BuildMultiTradeSeString(DalamudLinkPayload payload, bool status, (uint, string, string) target, TradeItem[][] items, uint[] gil, Dictionary<uint, RecordItem>[] multiItems, uint[] multiGil)
 		{
 			if (items.Length == 0 || gil.Length != 2 || multiItems.Length == 0 || multiGil.Length != 2) {
-				return new SeStringBuilder().AddText($"[{TradeRecorder.PluginName}]").AddUiForeground("获取交易内容失败", 17);
+				return new SeStringBuilder().AddText($"[{Cashier.PluginName}]").AddUiForeground("获取交易内容失败", 17);
 			}
 			var builder = BuildTradeSeString(payload, status, target, items, gil);
 			builder.Add(new NewLinePayload()).AddText("连续交易:");
@@ -635,7 +663,7 @@ namespace TradeRecorder.Window
 			if (payload != null) {
 				tradeRecorder.PluginUi.History.ShowHistory(payload.PlayerName + "@" + payload.World.Name.RawString);
 			} else {
-				Common.Chat.PrintError("未找到交易对象");
+				Commons.Chat.PrintError("未找到交易对象");
 				Svc.PluginLog.Verbose($"未找到交易对象，data=[{str.ToJson()}]");
 			}
 		}
@@ -645,7 +673,12 @@ namespace TradeRecorder.Window
 			if (!trading) {
 				Reset();
 				trading = true;
+				Commons.Chat.PrintMsg("交易开始");
 				Svc.PluginLog.Verbose("交易开始");
+
+				if(addonTrade == default) {
+					addonTrade = (AtkUnitBase*)Svc.GameGui.GetAddonByName("Trade");
+				}
 			}
 		}
 
@@ -654,15 +687,16 @@ namespace TradeRecorder.Window
 			if (trading) {
 				trading = false;
 				Finish(success);
+				Commons.Chat.PrintMsg("交易结束");
 				Svc.PluginLog.Verbose("交易结束");
 			}
 		}
 
-		public void TradeUpdate(AddonEvent _, AddonArgs __)
+		public void AddonTradeReceiveEvent(AddonEvent _, AddonArgs __)
 		{
-			if (trading) {
-				Svc.PluginLog.Verbose("交易更新");
-			}
+			Commons.Chat.PrintLog("状态变动");
+			// 自身槽位+确认状态变动
+
 		}
 
 		public unsafe void TradeItem(uint itemId, int count)
@@ -679,9 +713,9 @@ namespace TradeRecorder.Window
 			}
 			InventoryType[] InventoryTypes = [
 				InventoryType.Inventory1,
-					InventoryType.Inventory2,
-					InventoryType.Inventory3,
-					InventoryType.Inventory4
+				InventoryType.Inventory2,
+				InventoryType.Inventory3,
+				InventoryType.Inventory4
 			];
 			var foundType = InventoryTypes.Where(i => inventoryManager->GetItemCountInContainer(itemId, i) != 0).ToList();
 			if (foundType.Count == 0) {
@@ -715,10 +749,10 @@ namespace TradeRecorder.Window
 
 			agent->OpenForItemSlot(foundType.First(), (int)foundSlot, agentInventory->AddonId);
 
-			tradeRecorder.TaskManager.DelayNext(50);
-			tradeRecorder.TaskManager.Enqueue(() =>
+			TaskManager.DelayNext(50);
+			TaskManager.Enqueue(() =>
 			{
-				var contextMenu = (AtkUnitBase*)Svc.GameGui.GetAddonByName("ContextMenu", 1);
+				var contextMenu = (AtkUnitBase*)Svc.GameGui.GetAddonByName("ContextMenu");
 
 				if (contextMenu is null) {
 					Svc.PluginLog.Error("contextMenu为空");
@@ -727,30 +761,19 @@ namespace TradeRecorder.Window
 
 				Callback.Fire(contextMenu, true, 0, 0, 0, 0, 0);
 			});
-			tradeRecorder.TaskManager.DelayNext(50);
-			tradeRecorder.TaskManager.Enqueue(() =>
-			{
-				var inputNumeric = (AtkUnitBase*)Svc.GameGui.GetAddonByName("InputNumeric", 1);
-
-				if (inputNumeric is null) {
-					Svc.PluginLog.Error("Input为空");
-					return;
-				}
-
-				Callback.Fire(inputNumeric, true, count);
-			});
-
+			TaskManager.DelayNext(50);
+			TaskManager.Enqueue(() => SetCount(count));
 		}
 
 		/// <summary>
-		/// 设置交易的金额，能突破100w上限，但是慎用
+		/// 设置交易的金额，能突破100w上限，一眼挂
 		/// </summary>
 		/// <param name="money"></param>
 		public unsafe void TradeGil(int money)
 		{
-			tradeRecorder.TaskManager.Enqueue(() =>
+			TaskManager.Enqueue(() =>
 			{
-				var contextMenu = (AtkUnitBase*)Svc.GameGui.GetAddonByName("Trade", 1);
+				var contextMenu = (AtkUnitBase*)Svc.GameGui.GetAddonByName("Trade");
 
 				if (contextMenu is null) {
 					Svc.PluginLog.Error("Trade为空");
@@ -759,18 +782,155 @@ namespace TradeRecorder.Window
 
 				Callback.Fire(contextMenu, true, 2, 0);
 			});
-			tradeRecorder.TaskManager.DelayNext(50);
-			tradeRecorder.TaskManager.Enqueue(() =>
-			{
-				var inputNumeric = (AtkUnitBase*)Svc.GameGui.GetAddonByName("InputNumeric", 1);
+			TaskManager.DelayNext(50);
+			TaskManager.Enqueue(() => SetCount(money));
+		}
 
-				if (inputNumeric is null) {
-					Svc.PluginLog.Error("Input为空");
+		private unsafe void SetCount(int count)
+		{
+			var inputNumeric = (AtkUnitBase*)Svc.GameGui.GetAddonByName("InputNumeric");
+
+			if (inputNumeric is null) {
+				Svc.PluginLog.Error("Input为空");
+				return;
+			}
+
+			Callback.Fire(inputNumeric, true, count);
+		}
+
+		public unsafe void RequestTrade(string name)
+		{
+			var myPostion = Svc.ClientState.LocalPlayer!.Position;
+			var distance = (Vector3 pos) =>
+			{
+				return Math.Pow(pos.X - myPostion.X, 2) + Math.Pow(pos.Z - myPostion.Z, 2) < 16;
+			};
+			var objAddress = Svc.ObjectTable
+				.FirstOrDefault(x => x.Name.TextValue == name
+				&& x.ObjectKind == ObjectKind.Player
+				&& distance(x.Position)
+				&& x.IsTargetable)?.Address ?? nint.Zero;
+			if (objAddress == nint.Zero) {
+				Svc.ChatGui.Print("找不到目标" + name);
+				return;
+			}
+			TargetSystem.Instance()->Target = (GameObject*)objAddress;
+			TargetSystem.Instance()->OpenObjectInteraction((GameObject*)objAddress);
+
+
+			TaskManager.DelayNext(50);
+
+			TaskManager.Enqueue(() =>
+			{
+				if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("ContextMenu", out var addon)) {
+
+					if (Commons.Addon.TryScanContextMenuText(addon, "申请交易", out var index)) {
+						Callback.Fire(addon, true, 0, index, 0U, 0, 0);
+					} else {
+						addon->FireCloseCallback();
+						addon->Close(true);
+					}
+
+				} else {
+					Svc.ChatGui.Print("ContextMenu失败");
+				}
+			});
+
+			//TODO 加一个申请交易
+			return;
+		}
+
+		public unsafe void TradeCancel()
+		{
+			TaskManager.Enqueue(() =>
+			{
+				var addon = (AtkUnitBase*)Svc.GameGui.GetAddonByName("Trade");
+
+				if (addon is null) {
+					Svc.PluginLog.Error("Trade为空");
 					return;
 				}
 
-				Callback.Fire(inputNumeric, true, money);
+				Callback.Fire(addon, true, 1, 0);
 			});
+		}
+
+		public unsafe void TradeConfirm()
+		{
+			TaskManager.Enqueue(() =>
+			{
+				var addon = (AtkUnitBase*)Svc.GameGui.GetAddonByName("Trade");
+
+				if (addon is null) {
+					Svc.PluginLog.Error("Trade为空");
+					return;
+				}
+
+				Callback.Fire(addon, true, 0, 0);
+			});
+		}
+
+		private unsafe void TradeCallback(EventCall eventCall)
+		{
+			if (eventCall.AtkValues.Count == 2 && eventCall.AtkValues[0].Type == ValueType.Int) {
+
+				switch (eventCall.AtkValues[0].Int) {
+					case 0:
+						Svc.ChatGui.Print("我确认");
+						break;
+					case -1:
+						//Svc.ChatGui.Print("右上角x掉");
+						break;
+					case 1:
+						//Svc.ChatGui.Print("交易取消");
+						break;
+					default:
+						Svc.ChatGui.Print("交易未知:" + eventCall.AtkValues[0].Int);
+						break;
+				}
+			}
+		}
+
+
+		public void SetTradeTarget(nint objectId)
+		{
+			if(Svc.ClientState.LocalPlayer?.ObjectId == objectId) {
+				return;
+			}
+			targetObjectId = objectId;
+			var player = Svc.ObjectTable.FirstOrDefault(i => i.ObjectId == objectId) as PlayerCharacter;
+			if (player != null) {
+				if (player.ObjectId != Svc.ClientState.LocalPlayer?.ObjectId) {
+					var world = Svc.DataManager.GetExcelSheet<World>()?.FirstOrDefault(r => r.RowId == player.HomeWorld.Id);
+					target = (player.HomeWorld.Id, player.Name.TextValue, world?.Name ?? "<Unknown>");
+				}
+			} else {
+				Svc.PluginLog.Error($"找不到交易对象，id: {objectId:X}");
+				target = (0, "<Unknown>", "<Unknown>");
+			}
+		}
+
+		public void RefreshData()
+		{
+			string player1_Money = addonTrade->GetNodeById(13)->GetAsAtkComponentNode()->Component->UldManager.NodeList[3]->GetAsAtkTextNode()->NodeText.ToString().Replace(",", string.Empty);
+			string player2_Money = addonTrade->GetNodeById(31)->GetAsAtkTextNode()->NodeText.ToString().Replace(",",string.Empty);
+			var player1_Check = addonTrade->GetNodeById(4)->GetAsAtkComponentNode()->Component->UldManager.NodeList[0]->GetAsAtkImageNode()->AtkResNode.ScaleY >= 1;
+			var player2_Check = addonTrade->GetNodeById(5)->GetAsAtkComponentNode()->Component->UldManager.NodeList[0]->GetAsAtkImageNode()->AtkResNode.ScaleY >= 1;
+
+			uint[] AddonIndex = [8, 9, 10, 11, 12, 19, 20, 21, 22, 23];
+			//8-12 19-23
+			(int,int) getCount(int index)
+			{
+				var imageNode = addonTrade->GetNodeById(AddonIndex[index])->GetAsAtkComponentNode()->Component->UldManager.NodeList[2]->GetAsAtkComponentNode();
+				if (!imageNode->AtkResNode.IsVisible) {
+					return (0, 0);
+				}
+
+				var countString = imageNode->Component->UldManager.NodeList[6]->GetAsAtkTextNode()->NodeText.ToString();
+				var count = int.TryParse(countString, out int result)? result : 0;
+
+				return (agentTrade.TradeSlot[index].ItemId, count);
+			}
 		}
 	}
 }

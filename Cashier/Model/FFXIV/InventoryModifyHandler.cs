@@ -1,7 +1,7 @@
 ﻿using FFXIVClientStructs.FFXIV.Client.Game;
 using System.Runtime.InteropServices;
 
-namespace TradeRecorder.Model.FFXIV
+namespace Cashier.Model.FFXIV
 {
     [StructLayout(LayoutKind.Sequential, Size = 0x26)]
     public struct InventoryModifyHandler

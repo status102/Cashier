@@ -6,9 +6,9 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using TradeRecorder.Common;
+using Cashier.Commons;
 
-namespace TradeRecorder.Universalis
+namespace Cashier.Universalis
 {
     public class Price
 	{

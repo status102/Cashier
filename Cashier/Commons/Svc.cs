@@ -1,8 +1,9 @@
-﻿using Dalamud.IoC;
+﻿using Dalamud.Game;
+using Dalamud.IoC;
 using Dalamud.Plugin;
 using Dalamud.Plugin.Services;
 
-namespace TradeRecorder.Common
+namespace Cashier.Commons
 {
 	public class Svc
 	{
@@ -20,5 +21,8 @@ namespace TradeRecorder.Common
 		[PluginService] public static IGameNetwork GameNetwork { get; private set; } = null!;
 		[PluginService] public static IPluginLog PluginLog { get; private set; } = null!;
 		[PluginService] public static IAddonLifecycle AddonLifecycle { get; private set; } = null!;
+		[PluginService] public static IAddonEventManager AddonEventManager { get; private set; } = null!;
+		[PluginService] public static ISigScanner SigScanner { get; private set; } = null!;
+		[PluginService] public static IGameInteropProvider GameInteropProvider { get; set; } = null!;
 	}
 }

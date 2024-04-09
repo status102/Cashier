@@ -1,9 +1,9 @@
 ﻿using Lumina.Excel.GeneratedSheets;
 using System.Linq;
-using TradeRecorder.Common;
-using TradeRecorder.Universalis;
+using Cashier.Commons;
+using Cashier.Universalis;
 
-namespace TradeRecorder.Model
+namespace Cashier.Model
 {
     public class Preset
 	{

@@ -3,7 +3,7 @@ using Dalamud.Interface;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using ImGuiNET;
 
-namespace TradeRecorder.Common
+namespace Cashier.Commons
 {
     public class Utils
     {
