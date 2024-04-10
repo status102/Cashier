@@ -2,16 +2,11 @@
 using Dalamud.Game.Addon.Events;
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Command;
-using Dalamud.Hooking;
 using Dalamud.Plugin;
-using Dalamud.Utility.Signatures;
 using ECommons;
 using ECommons.Automation;
-using ECommons.Logging;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using System;
-using System.Runtime.InteropServices;
 
 namespace Cashier
 {
@@ -64,25 +59,15 @@ namespace Cashier
 			});
 
 
-
 			ECommonsMain.Init(pluginInterface, this);
 			TaskManager = new();
+			HookHelper = new(this);
 
 			if (!GenericHelpers.TryGetAddonByName<AtkUnitBase>("Trade", out var addon)) {
 				Svc.ChatGui.Print("没找到注入");
 				// 无用
 			} else {
-				var a = addon->GetNodeById(8)->GetAsAtkComponentNode()->Component->UldManager.NodeList;
-				var targetNode = (addon->GetNodeById(8)->GetAsAtkComponentNode()->Component->UldManager.NodeList[0])->GetAsAtkCollisionNode();
-
-				Svc.AddonEventManager.AddEvent((nint)addon, (nint)targetNode, AddonEventType.InputReceived, Test);
-			}
-			HookHelper = new(this);
 		}
-
-		private void Test(AddonEventType atkEventType, nint atkUnitBase, nint atkResNode)
-		{
-			Svc.ChatGui.Print("test");
 		}
 
 		public void Dispose()

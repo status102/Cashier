@@ -25,7 +25,7 @@ namespace Cashier.Commons
 
 		public void Dispose()
 		{
-			if (isDisposed) 
+			if (isDisposed)
 				return;
 			isDisposed = true;
 
@@ -38,7 +38,7 @@ namespace Cashier.Commons
 
 
 
-		
+
 		[Signature("40 53 48 83 EC 20 83 79 70 00 48 8B D9 74 36", DetourName = nameof(DetourResetSlot))]
 		private Hook<ResetSlot>? _resetSlotHook;
 		private delegate nint ResetSlot(nint a);
@@ -52,7 +52,7 @@ namespace Cashier.Commons
 				Svc.PluginLog.Error("An error occured when handling a macro save event." + ex.Message);
 			}
 
-			return this._resetSlotHook!.Original(a);
+			return _resetSlotHook!.Original(a);
 		}
 
 		[Signature("48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 48 89 7C 24 20 41 56 48 83 EC 20 8B F2 41 8B E9 48 8B D9 45", DetourName = nameof(DetourSetSlotItemId))]
@@ -63,13 +63,9 @@ namespace Cashier.Commons
 			// 未能读取到物品数量，暂时搁置
 			Svc.PluginLog.Information($"一个格子设置: {a:X}, itemId:{itemId}, a3:{a3}, a4:{a4}, a5:{a5}");
 
-			try {
-				// your plugin logic goes here.
-			} catch (Exception ex) {
-				Svc.PluginLog.Error("An error occured when handling a macro save event." + ex.Message);
-			}
+			cashier.PluginUi.Trade.SetTradeSlotItem(a, (int)itemId);
 
-			return this._setSlotItemIdHook!.Original(a, itemId, a3, a4, a5);
+			return _setSlotItemIdHook!.Original(a, itemId, a3, a4, a5);
 		}
 
 		[Signature("4C 8B DC 53 55 48 81 EC 68 01 00 00 48 8B 05 0D 56 A6 01 48 33 C4 48 89 84 24 40 01 00 00", DetourName = nameof(DetourTradeTarget))]
@@ -78,23 +74,30 @@ namespace Cashier.Commons
 		private nint DetourTradeTarget(nint a1, nint objectId, nint a3)
 		{
 			switch (Marshal.ReadByte(a3 + 4)) {
+				case 1:
+					// case 1: 别人交易你
+					break;
+				case 2:
+					// case 2: 发起交易
+					break;
 				case 16:
 					// case 16: 交易状态更新
 					cashier.PluginUi.Trade.SetTradeTarget(objectId);
+					break;
+				case 7:
+					// case 7: 取消交易
 					break;
 				case 17:
 					// case 17: 交易成功
 					break;
 				default:
 					Svc.PluginLog.Information($"交易目标: {a1:X}, {objectId:X}, {a3:X}, {Marshal.ReadByte(a3 + 4)}");
-					// case 7: 取消交易
-					// case 1: 别人交易你
-					// case 2: 发起交易
+
 
 					// case 5: 最终确认
 					break;
 			}
-			return this._tradeTargetHook!.Original(a1, objectId, a3);
+			return _tradeTargetHook!.Original(a1, objectId, a3);
 		}
 
 		[Signature("0F B7 42 06 4C 8B D1 44 8B 4A 10 4C 6B C0 38 41 80 BC 08", DetourName = nameof(DetourTradeOtherMoney))]
@@ -103,7 +106,7 @@ namespace Cashier.Commons
 		private nint DetourTradeOtherMoney(nint a1, nint a2)
 		{
 			Svc.PluginLog.Information($"交易对面出价: {a1:X}, {a2:X}, {(uint)Marshal.ReadInt32(a2 + 8)}");
-			return this._tradeOtherMoney!.Original(a1, a2);
+			return _tradeOtherMoney!.Original(a1, a2);
 		}
 
 		[Signature("3B 51 08 7D ?? 48 8B 41 20 48 63 D2 44 39 04 90", DetourName = nameof(DetourTradeCount))]
@@ -112,7 +115,7 @@ namespace Cashier.Commons
 		private void DetourTradeCount(nint a1, int a2, int a3)
 		{
 			Svc.PluginLog.Information($"交易 物品槽 数量: {a1:X}, {a2:X}, {a3}");
-			this._tradeCountHook!.Original(a1, a2, a3);
+			_tradeCountHook!.Original(a1, a2, a3);
 		}
 	}
 }
