@@ -18,7 +18,7 @@ namespace Cashier.Commons
 
 			//_resetSlotHook?.Enable();
 			_setSlotItemIdHook?.Enable();
-			_tradeTargetHook?.Enable();
+			_tradeStatusHook?.Enable();
 			_tradeOtherMoney?.Enable();
 			//_tradeCountHook?.Enable();
 		}
@@ -31,7 +31,7 @@ namespace Cashier.Commons
 
 			_tradeCountHook?.Dispose();
 			_tradeOtherMoney?.Dispose();
-			_tradeTargetHook?.Dispose();
+			_tradeStatusHook?.Dispose();
 			_resetSlotHook?.Dispose();
 			_setSlotItemIdHook?.Dispose();
 		}
@@ -68,8 +68,8 @@ namespace Cashier.Commons
 			return _setSlotItemIdHook!.Original(a, itemId, a3, a4, a5);
 		}
 
-		[Signature("4C 8B DC 53 55 48 81 EC 68 01 00 00 48 8B 05 0D 56 A6 01 48 33 C4 48 89 84 24 40 01 00 00", DetourName = nameof(DetourTradeTarget))]
-		private Hook<TradeTarget>? _tradeTargetHook;
+		[Signature("4C 8B DC 53 55 48 81 EC 68 01 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 40 01 00 00", DetourName = nameof(DetourTradeTarget))]
+		private Hook<TradeTarget>? _tradeStatusHook;
 		private delegate nint TradeTarget(nint a1, nint a2, nint a3);
 		private nint DetourTradeTarget(nint a1, nint objectId, nint a3)
 		{
@@ -97,7 +97,8 @@ namespace Cashier.Commons
 					// case 5: 最终确认
 					break;
 			}
-			return _tradeTargetHook!.Original(a1, objectId, a3);
+
+			return _tradeStatusHook!.Original(a1, objectId, a3);
 		}
 
 		[Signature("0F B7 42 06 4C 8B D1 44 8B 4A 10 4C 6B C0 38 41 80 BC 08", DetourName = nameof(DetourTradeOtherMoney))]
