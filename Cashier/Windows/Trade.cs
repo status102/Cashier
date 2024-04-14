@@ -1,6 +1,7 @@
 ﻿using Cashier.Commons;
 using Cashier.Model;
 using Cashier.Model.FFXIV;
+using Cashier.Models;
 using Cashier.Universalis;
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
@@ -62,7 +63,7 @@ namespace Cashier.Windows
         /// 交易物品记录，0自己，1对面
         /// </summary>
         private TradeItem[][] _tradeItemList = new TradeItem[2][];
-
+        private bool[] _tradePlayerConfirm = new bool[2];
         /// <summary>
         /// 交易金币记录，0自己，1对面
         /// </summary>
@@ -91,11 +92,11 @@ namespace Cashier.Windows
         /// <summary>
         /// 交易目标
         /// </summary>
-        private (uint, string, string) target = (0, "", "");
+        private TradeTarget target = new();
         /// <summary>
         /// 上次交易目标，用于判断是否连续交易
         /// </summary>
-        private (uint, string, string) lastTarget = (0, "", "");
+        private TradeTarget lastTarget = new();
         /// <summary>
         /// 对方交易栏的发包序号，序号步进后需要清空道具栏
         /// </summary>
@@ -174,17 +175,23 @@ namespace Cashier.Windows
 
                 // 显示当前交易对象的记录
                 ImGui.SameLine();
-                if (ImGuiComponents.IconButton(FontAwesomeIcon.History)) { _cashier.PluginUi.History.ShowHistory(target.Item2 + "@" + target.Item3); }
-                if (ImGui.IsItemHovered()) { ImGui.SetTooltip("显示当前交易对象的交易记录"); }
+                if (ImGuiComponents.IconButton(FontAwesomeIcon.History)) {
+                    _cashier.PluginUi.History.ShowHistory(target.PlayerName + "@" + target.WorldName);
+                }
+                if (ImGui.IsItemHovered()) {
+                    ImGui.SetTooltip("显示当前交易对象的交易记录");
+                }
 
                 // 显示设置窗口
                 ImGui.SameLine();
-                if (ImGuiComponents.IconButton(FontAwesomeIcon.Cog)) { _cashier.PluginUi.Setting.Show(); }
+                if (ImGuiComponents.IconButton(FontAwesomeIcon.Cog)) {
+                    _cashier.PluginUi.Setting.Show();
+                }
 
                 DrawTradeTable(_tradeItemList[0], _tradeGil[0]);
                 ImGui.Spacing();
 
-                ImGui.TextUnformatted($"{target.Item2} @ {target.Item3} -->");
+                ImGui.TextUnformatted($"{target.PlayerName} @ {target.WorldName} -->");
                 DrawTradeTable(_tradeItemList[1], _tradeGil[1]);
                 ImGui.End();
             }
@@ -434,7 +441,7 @@ namespace Cashier.Windows
                 _tradeItemList[1].Where(i => i.Id != 0).ToArray()
             ];
 
-            _cashier.PluginUi.History.AddHistory(status, $"{target.Item2}@{target.Item3}", gil, list);
+            _cashier.PluginUi.History.AddHistory(status, $"{target.PlayerName}@{target.WorldName}", gil, list);
 
             if (lastTarget != target) {
                 multiGil = [0, 0];
@@ -474,7 +481,7 @@ namespace Cashier.Windows
                 }
             }
 
-            Commons.Chat.PrintMsg("交易结束" + target.Item3);
+            Commons.Chat.PrintLog("交易结束" + target.PlayerName);
             // todo 恢复结束输出
             if (lastTarget == target) {
                 //Svc.ChatGui.Print(BuildMultiTradeSeString(Payload, status, target, list, gil, multiItemList, multiGil).BuiltString);
@@ -512,7 +519,7 @@ namespace Cashier.Windows
                 if (player != null) {
                     if (player.ObjectId != Svc.ClientState.LocalPlayer?.ObjectId) {
                         var world = Svc.DataManager.GetExcelSheet<World>()?.FirstOrDefault(r => r.RowId == player.HomeWorld.Id);
-                        target = (player.HomeWorld.Id, player.Name.TextValue, world?.Name ?? "<Unknown>");
+                        //target = (player.HomeWorld.Id, player.Name.TextValue, world?.Name ?? "<Unknown>");
                     }
                 }
             }
@@ -766,12 +773,12 @@ namespace Cashier.Windows
             if (player != null) {
                 if (player.ObjectId != Svc.ClientState.LocalPlayer?.ObjectId) {
                     var world = Svc.DataManager.GetExcelSheet<World>()?.FirstOrDefault(r => r.RowId == player.HomeWorld.Id);
-                    target = (player.HomeWorld.Id, player.Name.TextValue, world?.Name ?? "???");
+                    target = new(player.HomeWorld.Id, world?.Name ?? "???", objectId, player.Name.TextValue);
                     Commons.Chat.PrintLog($"交易目标:{player.Name.TextValue}");
                 }
             } else {
                 Svc.PluginLog.Error($"找不到交易对象，id: {objectId:X}");
-                target = (0, "???", "???");
+                target = new();
             }
         }
 
