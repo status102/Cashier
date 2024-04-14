@@ -193,8 +193,8 @@ namespace Cashier.Windows
                 Chat.PrintError("历史记录追加失败，Player为空");
                 return;
             }
-            var giveList = items[0].Select(i => new TradeHistory.HistoryItem(i.IconId, i.Name ?? "<Unknown>", i.Count, i.Quality)).ToArray();
-            var receiviList = items[1].Select(i => new TradeHistory.HistoryItem(i.IconId, i.Name ?? "<Unknown>", i.Count, i.Quality)).ToArray();
+            var giveList = items[0].Select(i => new TradeHistory.HistoryItem(i.IconId, i.Name ?? "???", i.Count, i.Quality)).ToArray();
+            var receiviList = items[1].Select(i => new TradeHistory.HistoryItem(i.IconId, i.Name ?? "???", i.Count, i.Quality)).ToArray();
 
             TradeHistory tradeHistory = new()
             {

@@ -562,20 +562,26 @@ namespace Cashier.Windows
                 .AddText(SeIconChar.ArrowRight.ToIconString())
                 .Add(payload)
                 .AddUiForeground(1).Add(new PlayerPayload(target.Item2, target.Item1)).AddUiForegroundOff();
-            if (target.Item1 != Svc.ClientState.LocalPlayer?.HomeWorld.Id) { builder.Add(new IconPayload(BitmapFontIcon.CrossWorld)).AddText(target.Item3); }
+            if (target.Item1 != Svc.ClientState.LocalPlayer?.HomeWorld.Id) {
+                builder.Add(new IconPayload(BitmapFontIcon.CrossWorld)).AddText(target.Item3);
+            }
             builder.Add(RawPayload.LinkTerminator);
-            if (!status) { builder.AddUiForeground(" (取消)", 62); }
+            if (!status) {
+                builder.AddUiForeground(" (取消)", 62);
+            }
             // 获得
             if (gil[0] != 0 || items[0].Length != 0) {
                 builder.Add(new NewLinePayload());
                 builder.AddText("<<==  ");
                 if (gil[0] != 0) { builder.AddText($"{gil[0]:#,0}{(char)SeIconChar.Gil}"); }
                 for (int i = 0; i < items[0].Length; i++) {
-                    if (i != 0 || gil[0] != 0) { builder.AddText(", "); }
+                    if (i != 0 || gil[0] != 0) {
+                        builder.AddText(", ");
+                    }
                     var name = items[0][i].Name + (items[0][i].Quality ? SeIconChar.HighQuality.ToIconString() : string.Empty) + "x" + items[0][i].Count;
                     builder.AddItemLink(items[0][i].Id, items[0][i].Quality)
                         .AddUiForeground(SeIconChar.LinkMarker.ToIconString(), 500)
-                        .AddUiForeground(name ?? "<Unknown>", 1)
+                        .AddUiForeground(name ?? "???", 1)
                         .Add(RawPayload.LinkTerminator);
                 }
             }
@@ -590,7 +596,7 @@ namespace Cashier.Windows
                     var name = items[1][i].Name + (items[1][i].Quality ? SeIconChar.HighQuality.ToIconString() : string.Empty) + "x" + items[1][i].Count;
                     builder.AddItemLink(items[1][i].Id, items[1][i].Quality)
                         .AddUiForeground(SeIconChar.LinkMarker.ToIconString(), 500)
-                        .AddUiForeground(name ?? "<Unknown>", 1)
+                        .AddUiForeground(name ?? "???", 1)
                         .Add(RawPayload.LinkTerminator);
                 }
             }
@@ -629,8 +635,12 @@ namespace Cashier.Windows
 
                     var nqStr = item.StackSize > 1 && item.NqCount >= item.StackSize ? (item.NqCount / item.StackSize + "组" + item.NqCount % item.StackSize) : item.NqCount.ToString("#,0");
                     var hqStr = item.StackSize > 1 && item.HqCount >= item.StackSize ? (item.HqCount / item.StackSize + "组" + item.HqCount % item.StackSize) : item.HqCount.ToString("#,0");
-                    if (nqStr.EndsWith("组0")) { nqStr = nqStr[..^1]; }
-                    if (hqStr.EndsWith("组0")) { hqStr = hqStr[..^1]; }
+                    if (nqStr.EndsWith("组0")) {
+                        nqStr = nqStr[..^1];
+                    }
+                    if (hqStr.EndsWith("组0")) {
+                        hqStr = hqStr[..^1];
+                    }
 
                     if (item.HqCount == 0) {
                         builder.AddUiForeground($"<{nqStr}>", 1);
@@ -656,8 +666,12 @@ namespace Cashier.Windows
 
                     var nqStr = item.StackSize > 1 && item.NqCount >= item.StackSize ? (item.NqCount / item.StackSize + "组" + item.NqCount % item.StackSize) : item.NqCount.ToString("#,0");
                     var hqStr = item.StackSize > 1 && item.HqCount >= item.StackSize ? (item.HqCount / item.StackSize + "组" + item.HqCount % item.StackSize) : item.HqCount.ToString("#,0");
-                    if (nqStr.EndsWith("组0")) { nqStr = nqStr[..^1]; }
-                    if (hqStr.EndsWith("组0")) { hqStr = hqStr[..^1]; }
+                    if (nqStr.EndsWith("组0")) {
+                        nqStr = nqStr[..^1];
+                    }
+                    if (hqStr.EndsWith("组0")) {
+                        hqStr = hqStr[..^1];
+                    }
 
                     if (item.HqCount == 0) {
                         builder.AddUiForeground($"<{nqStr}>", 1);
