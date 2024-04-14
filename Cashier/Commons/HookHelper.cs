@@ -5,118 +5,163 @@ using System.Runtime.InteropServices;
 
 namespace Cashier.Commons
 {
-	public class HookHelper : IDisposable
-	{
-		private bool isDisposed;
+    public sealed class HookHelper : IDisposable
+    {
+        private readonly Cashier _cashier;
+        private bool _isDisposed;
 
-		private readonly Cashier cashier;
+        public HookHelper(Cashier cashier)
+        {
+            _cashier = cashier;
+            Svc.GameInteropProvider.InitializeFromAttributes(this);
 
-		public HookHelper(Cashier cashier)
-		{
-			this.cashier = cashier;
-			Svc.GameInteropProvider.InitializeFromAttributes(this);
+            _tradeStatusUpdateHook?.Enable();
+            _tradeRequestHook?.Enable();
 
-			//_resetSlotHook?.Enable();
-			_setSlotItemIdHook?.Enable();
-			_tradeStatusHook?.Enable();
-			_tradeOtherMoney?.Enable();
-			//_tradeCountHook?.Enable();
-		}
+            _setSlotItemIdHook?.Enable();
+            _setSlotItemCount2Hook?.Enable();
+            _resetSlotHook?.Enable();
+            _tradeMyMoney?.Enable();
+            _tradeOtherMoney?.Enable();
+            //_tradeCountHook?.Enable();
+        }
 
-		public void Dispose()
-		{
-			if (isDisposed)
-				return;
-			isDisposed = true;
+        public void Dispose()
+        {
+            if (_isDisposed) {
+                return;
+            }
+            _isDisposed = true;
 
-			_tradeCountHook?.Dispose();
-			_tradeOtherMoney?.Dispose();
-			_tradeStatusHook?.Dispose();
-			_resetSlotHook?.Dispose();
-			_setSlotItemIdHook?.Dispose();
-		}
+            _tradeStatusUpdateHook?.Dispose();
+            _tradeRequestHook?.Dispose();
 
-
-
-
-		[Signature("40 53 48 83 EC 20 83 79 70 00 48 8B D9 74 36", DetourName = nameof(DetourResetSlot))]
-		private Hook<ResetSlot>? _resetSlotHook;
-		private delegate nint ResetSlot(nint a);
-		private nint DetourResetSlot(nint a)
-		{
-			Svc.PluginLog.Information($"一个格子被清空: {a:X}");
-
-			try {
-				// your plugin logic goes here.
-			} catch (Exception ex) {
-				Svc.PluginLog.Error("An error occured when handling a macro save event." + ex.Message);
-			}
-
-			return _resetSlotHook!.Original(a);
-		}
-
-		[Signature("48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 48 89 7C 24 20 41 56 48 83 EC 20 8B F2 41 8B E9 48 8B D9 45", DetourName = nameof(DetourSetSlotItemId))]
-		private Hook<SetSlotItemId>? _setSlotItemIdHook;
-		private delegate nint SetSlotItemId(nint a, uint itemId, nint a3, int a4, nint a5);
-		private nint DetourSetSlotItemId(nint a, uint itemId, nint a3, int a4, nint a5)
-		{
-			// 未能读取到物品数量，暂时搁置
-			Svc.PluginLog.Information($"一个格子设置: {a:X}, itemId:{itemId}, a3:{a3}, a4:{a4}, a5:{a5}");
-
-			cashier.PluginUi.Trade.SetTradeSlotItem(a, (int)itemId);
-
-			return _setSlotItemIdHook!.Original(a, itemId, a3, a4, a5);
-		}
-
-		[Signature("4C 8B DC 53 55 48 81 EC 68 01 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 40 01 00 00", DetourName = nameof(DetourTradeTarget))]
-		private Hook<TradeTarget>? _tradeStatusHook;
-		private delegate nint TradeTarget(nint a1, nint a2, nint a3);
-		private nint DetourTradeTarget(nint a1, nint objectId, nint a3)
-		{
-			switch (Marshal.ReadByte(a3 + 4)) {
-				case 1:
-					// case 1: 别人交易你
-					break;
-				case 2:
-					// case 2: 发起交易
-					break;
-				case 16:
-					// case 16: 交易状态更新
-					cashier.PluginUi.Trade.SetTradeTarget(objectId);
-					break;
-				case 7:
-					// case 7: 取消交易
-					break;
-				case 17:
-					// case 17: 交易成功
-					break;
-				default:
-					Svc.PluginLog.Information($"交易目标: {a1:X}, {objectId:X}, {a3:X}, {Marshal.ReadByte(a3 + 4)}");
+            _setSlotItemIdHook?.Dispose();
+            _setSlotItemCount2Hook?.Dispose();
+            _resetSlotHook?.Dispose();
+            _tradeMyMoney?.Dispose();
+            _tradeOtherMoney?.Dispose();
+            _tradeCountHook?.Dispose();
+        }
 
 
-					// case 5: 最终确认
-					break;
-			}
+        [Signature("40 53 48 83 EC 20 83 79 70 00 48 8B D9 74 36", DetourName = nameof(DetourResetSlot))]
+        private Hook<ResetSlot>? _resetSlotHook;
+        private delegate nint ResetSlot(nint a);
+        private nint DetourResetSlot(nint a)
+        {
+            //Svc.PluginLog.Information($"一个格子被清空: {a:X}");
+            _cashier.PluginUi.Trade.ClearTradeSlotItem(a);
+            return _resetSlotHook!.Original(a);
+        }
 
-			return _tradeStatusHook!.Original(a1, objectId, a3);
-		}
+        [Signature("48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 48 89 7C 24 20 41 56 48 83 EC 20 8B F2 41 8B E9 48 8B D9 45", DetourName = nameof(DetourSetSlotItemId))]
+        private Hook<SetSlotItemId>? _setSlotItemIdHook;
+        private delegate nint SetSlotItemId(nint a, uint itemId, nint a3, int a4, nint a5);
+        private nint DetourSetSlotItemId(nint a, uint itemId, nint a3, int a4, nint a5)
+        {
+            // 未能读取到物品数量，暂时搁置
+            //Svc.PluginLog.Debug($"一个格子设置: {a:X}, itemId:{itemId}, a3:{a3}, a4:{a4}, a5:{a5}");
 
-		[Signature("0F B7 42 06 4C 8B D1 44 8B 4A 10 4C 6B C0 38 41 80 BC 08", DetourName = nameof(DetourTradeOtherMoney))]
-		private Hook<TradeOtherMoney>? _tradeOtherMoney;
-		private delegate nint TradeOtherMoney(nint a1, nint a2);
-		private nint DetourTradeOtherMoney(nint a1, nint a2)
-		{
-			Svc.PluginLog.Information($"交易对面出价: {a1:X}, {a2:X}, {(uint)Marshal.ReadInt32(a2 + 8)}");
-			return _tradeOtherMoney!.Original(a1, a2);
-		}
+            _cashier.PluginUi.Trade.SetTradeSlotItem(a, (int)itemId);
 
-		[Signature("3B 51 08 7D ?? 48 8B 41 20 48 63 D2 44 39 04 90", DetourName = nameof(DetourTradeCount))]
-		private Hook<TradeCount>? _tradeCountHook;
-		private delegate void TradeCount(nint a1, int a2, int a3);
-		private void DetourTradeCount(nint a1, int a2, int a3)
-		{
-			Svc.PluginLog.Information($"交易 物品槽 数量: {a1:X}, {a2:X}, {a3}");
-			_tradeCountHook!.Original(a1, a2, a3);
-		}
-	}
+            return _setSlotItemIdHook!.Original(a, itemId, a3, a4, a5);
+        }
+
+        [Signature("48 89 5C 24 08 48 89 6C 24 10 48 89 74 24 18 48 89 7C 24 20 41 56 48 83 EC 20 33 FF 49 8B E8", DetourName = nameof(DetourSetSlotItemCount2))]
+        private Hook<SetSlotItemCount2>? _setSlotItemCount2Hook;
+        private delegate nint SetSlotItemCount2(nint a1, nint a2, nint a3, int a4);
+        private nint DetourSetSlotItemCount2(nint a1, nint a2, nint a3, int a4)
+        {
+            if (((Marshal.ReadByte(a3) & 0x0F) != 0x00) && Marshal.ReadInt32(a3 + 8) > 0) {
+                Svc.PluginLog.Debug($"格子数量设置: {a1:X}, a2:{a2:X}, a3:{a3}, a4:{a4}, count:{(uint)Marshal.ReadInt32(a3 + 8)}, a1+16:{a1 + 16:X}, a1+16+12:{a1 + 16 + 12:X}, *(a1+16):{Marshal.ReadInt64(a1 + 16):X}");
+            }
+            return _setSlotItemCount2Hook!.Original(a1, a2, a3, a4);
+        }
+
+        #region 交易目标及状态
+        [Signature("48 89 6C 24 18 57 41 56 41 57 48 83 EC 50 48 8B E9 44 8B FA", DetourName = nameof(DetourTradeRequest))]
+        private Hook<TradeRequest>? _tradeRequestHook;
+        private delegate nint TradeRequest(nint a1, nint a2);
+        private nint DetourTradeRequest(nint a1, nint objectId)
+        {
+            _cashier.PluginUi.Trade.SetTradeTarget(objectId);
+            return _tradeRequestHook!.Original(a1, objectId);
+        }
+
+        [Signature("4C 8B DC 53 55 48 81 EC 68 01 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 40 01 00 00", DetourName = nameof(DetourTradeStatusUpdate))]
+        private Hook<TradeStatusUpdate>? _tradeStatusUpdateHook;
+        private delegate nint TradeStatusUpdate(nint a1, nint a2, nint a3);
+        private nint DetourTradeStatusUpdate(nint a1, nint a2, nint a3)
+        {
+            // a2 为ObjectId的交易对象，但是似乎源码都用的a3+40
+            Svc.PluginLog.Debug($"交易状态: {a1:X}, {a2:X}, {a3:X}, {Marshal.ReadByte(a3 + 4)}");
+
+            switch (Marshal.ReadByte(a3 + 4)) {
+                case 1:
+                    // 别人交易你
+                    _cashier.PluginUi.Trade.SetTradeTarget(Marshal.ReadInt32(a3 + 40));
+                    break;
+                case 2:
+                    // 发起交易
+                    break;
+                case 16:
+                    // case 16: 交易状态更新
+#if DEBUG
+                    Svc.PluginLog.Debug($"交易状态0x10: {a1:X}, {a2:X}, {a3:X}, *(a3+5){Marshal.ReadByte(a3 + 5)}, *(a3+40):{(uint)Marshal.ReadInt32(a3 + 40):X}");
+#endif
+                    var a = Marshal.ReadByte(a3 + 5);
+                    if (a == 4 || a == 5) {
+                        // 先确认条件的一边会产生一个a=4，两边都确认后发两个a=5
+                        // 最终确认先确认的产生一个a=6，两边都确认后发两个a=1
+                        _cashier.PluginUi.Trade.SetTradeConfirm(Marshal.ReadInt32(a3 + 40));
+                    }
+                    break;
+                case 7:
+                    // case 7: 取消交易
+                    break;
+                case 17:
+                    // case 17: 交易成功
+                    break;
+                default:
+                    Svc.PluginLog.Debug($"交易状态: {a1:X}, {a2:X}, {a3:X}, {Marshal.ReadByte(a3 + 4)}");
+
+
+                    // case 5: 最终确认
+                    break;
+            }
+
+            return _tradeStatusUpdateHook!.Original(a1, a2, a3);
+        }
+        #endregion
+
+        #region 交易出价
+        [Signature("0F B7 42 06 4C 8B D1 44 8B 4A 10 4C 6B C0 38 41 80 BC 08", DetourName = nameof(DetourTradeOtherMoney))]
+        private Hook<TradeOtherMoney>? _tradeOtherMoney;
+        private delegate nint TradeOtherMoney(nint a1, nint a2);
+        private nint DetourTradeOtherMoney(nint a1, nint a2)
+        {
+            _cashier.PluginUi.Trade.SetTradeMoney((uint)Marshal.ReadInt32(a2 + 8), false);
+            return _tradeOtherMoney!.Original(a1, a2);
+        }
+
+        [Signature("48 89 5C 24 08 57 48 83 EC 20 8B DA 48 8B F9 E8 ?? ?? ?? ?? 3B D8 76 ?? B8 08 00 00 00 48 8B 5C 24 30 48 83 C4 20 5F", DetourName = nameof(DetourTradeMyMoney))]
+        private Hook<TradeMyMoney>? _tradeMyMoney;
+        private delegate nint TradeMyMoney(nint a1, uint a2);
+        private nint DetourTradeMyMoney(nint a1, uint a2)
+        {
+            _cashier.PluginUi.Trade.SetTradeMoney(a2, true);
+            return _tradeMyMoney!.Original(a1, a2);
+        }
+        #endregion
+
+        [Signature("3B 51 08 7D ?? 48 8B 41 20 48 63 D2 44 39 04 90", DetourName = nameof(DetourTradeCount))]
+        private Hook<TradeCount>? _tradeCountHook;
+        private delegate void TradeCount(nint a1, int a2, int a3);
+        private void DetourTradeCount(nint a1, int a2, int a3)
+        {
+            Svc.PluginLog.Information($"交易 物品槽 数量: {a1:X}, {a2:X}, {a3}");
+            _tradeCountHook!.Original(a1, a2, a3);
+        }
+    }
 }

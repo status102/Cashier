@@ -25,7 +25,7 @@ namespace Cashier.Windows
         private readonly Cashier _cashier;
         private Configuration Config => _cashier.Config;
 
-        private bool visible = false;
+        private bool _visible = false;
         private bool showOpcode = false;
         private bool capturingOpcode = false;
         private uint captureCountdown = 0;
@@ -42,24 +42,24 @@ namespace Cashier.Windows
         private uint worldId => _cashier.homeWorldId;
 
         private static IDalamudTextureWrap? FailureImage => PluginUI.GetIcon(784);
-        public Setting(Cashier tradeRecorder)
+        public Setting(Cashier cashier)
         {
-            this._cashier = tradeRecorder;
+            this._cashier = cashier;
         }
 
         public void Show()
         {
-            visible = !visible;
+            _visible = !_visible;
         }
 
         public void Draw()
         {
-            if (!visible) {
+            if (!_visible) {
                 editItem = null;
                 return;
             }
-            ImGui.SetNextWindowSize(Window_Size, ImGuiCond.FirstUseEver);
-            if (ImGui.Begin(_cashier.Name + "插件设置", ref visible)) {
+            ImGui.SetNextWindowSize(Window_Size, ImGuiCond.Once);
+            if (ImGui.Begin($"###{_cashier.Name}Config", ref _visible)) {
                 if (ImGui.CollapsingHeader("基础设置", ImGuiTreeNodeFlags.DefaultOpen)) {
                     ImGui.Indent();
                     if (ImGui.Checkbox("显示交易窗口", ref Config.ShowTradeWindow)) {

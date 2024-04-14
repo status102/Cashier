@@ -1,109 +1,111 @@
-﻿using Dalamud.Game.Network;
+﻿using Cashier.Commons;
+using Cashier.Windows;
+using Dalamud.Game.Network;
 using Dalamud.Interface.Internal;
-using FFXIVClientStructs.FFXIV.Client.System.Framework;
-using FFXIVClientStructs.FFXIV.Component.GUI;
-using ImGuiScene;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using Cashier.Commons;
-using Cashier.Windows;
 
 namespace Cashier
 {
-	public unsafe class PluginUI : IDisposable
-	{
-		private Configuration config;
-		// 测试用opcode黑名单
-		private readonly static int[] blackList = [673, 379, 521, 572, 113, 241, 280, 169, 504, 642, 911, 365];
+    public unsafe class PluginUI : IDisposable
+    {
+        private Configuration config;
+        // 测试用opcode黑名单
+        private readonly static int[] blackList = [673, 379, 521, 572, 113, 241, 280, 169, 504, 642, 911, 365];
 
-		private readonly static Dictionary<uint, IDalamudTextureWrap?> iconList = [];
-		private readonly static Dictionary<uint, IDalamudTextureWrap?> hqIconList = [];
-		public History History { get; init; }
-		public Trade Trade { get; init; }
-		public Setting Setting { get; init; }
+        private readonly static Dictionary<long, IDalamudTextureWrap?> iconList = [];
+        public History History { get; init; }
+        public Trade Trade { get; init; }
+        public Setting Setting { get; init; }
 
-		//public AtkArrayDataHolder* atkArrayDataHolder { get; init; } = null;
+        //public AtkArrayDataHolder* atkArrayDataHolder { get; init; } = null;
 
-		public StreamWriter? networkMessageWriter;
+        public StreamWriter? networkMessageWriter;
 
-		public unsafe PluginUI(Cashier TradeRecorder, Configuration configuration) {
-			this.config = configuration;
-			Trade = new(TradeRecorder);
-			History = new(TradeRecorder);
-			Setting = new(TradeRecorder);
+        public unsafe PluginUI(Cashier TradeRecorder, Configuration configuration)
+        {
+            this.config = configuration;
+            Trade = new(TradeRecorder);
+            History = new(TradeRecorder);
+            Setting = new(TradeRecorder);
 
-			//var atkArrayDataHolder = &Framework.Instance()->GetUiModule()->GetRaptureAtkModule()->AtkModule.AtkArrayDataHolder;
-			//if (atkArrayDataHolder != null && atkArrayDataHolder->StringArrayCount > 0) { this.atkArrayDataHolder = atkArrayDataHolder; }
+            //var atkArrayDataHolder = &Framework.Instance()->GetUiModule()->GetRaptureAtkModule()->AtkModule.AtkArrayDataHolder;
+            //if (atkArrayDataHolder != null && atkArrayDataHolder->StringArrayCount > 0) { this.atkArrayDataHolder = atkArrayDataHolder; }
 #if DEBUG
-			Svc.GameNetwork.NetworkMessage += NetworkMessageDelegate;
+            Svc.GameNetwork.NetworkMessage += NetworkMessageDelegate;
 #endif
-		}
+        }
 
-		public void Dispose() {
+        public void Dispose()
+        {
 #if DEBUG
-			Svc.GameNetwork.NetworkMessage -= NetworkMessageDelegate;
+            Svc.GameNetwork.NetworkMessage -= NetworkMessageDelegate;
 #endif
-			Trade.Dispose();
-			Setting.Dispose();
-			History.Dispose();
-			if (networkMessageWriter != null) {
-				networkMessageWriter.Flush();
-				networkMessageWriter.Close();
-			}
-			foreach (IDalamudTextureWrap? icon in iconList.Values) { icon?.Dispose(); }
-			foreach (IDalamudTextureWrap? icon in hqIconList.Values) { icon?.Dispose(); }
-		}
+            Trade.Dispose();
+            Setting.Dispose();
+            History.Dispose();
+            if (networkMessageWriter != null) {
+                networkMessageWriter.Flush();
+                networkMessageWriter.Close();
+            }
+            iconList.Values.ToList().ForEach(i => i?.Dispose());
+        }
 
-		public void Draw() {
-			Trade.Draw();
-			History.Draw();
-			Setting.Draw();
-		}
+        public void Draw()
+        {
+            Trade?.Draw();
+            History?.Draw();
+            Setting?.Draw();
+        }
 
-		public unsafe void NetworkMessageDelegate(IntPtr dataPtr, ushort opcode, uint sourceActorId, uint targetActorId, NetworkMessageDirection direction) {
-			if (networkMessageWriter != null) {
-				StringBuilder stringBuilder = new();
-				byte databyte;
-				stringBuilder.Append(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff "));
-				int index = Marshal.ReadByte(dataPtr, 36);
-				int codeint56 = Marshal.ReadInt32(dataPtr, 56);
-				ushort codeShort56 = (ushort)Marshal.ReadInt16(dataPtr, 56);
-				ushort codeShort64 = (ushort)Marshal.ReadInt16(dataPtr, 64);
-				ushort codeShort72 = (ushort)Marshal.ReadInt16(dataPtr, 72);
+        public unsafe void NetworkMessageDelegate(IntPtr dataPtr, ushort opcode, uint sourceActorId, uint targetActorId, NetworkMessageDirection direction)
+        {
+            if (networkMessageWriter != null) {
+                StringBuilder stringBuilder = new();
+                byte databyte;
+                stringBuilder.Append(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff "));
+                int index = Marshal.ReadByte(dataPtr, 36);
+                int codeint56 = Marshal.ReadInt32(dataPtr, 56);
+                ushort codeShort56 = (ushort)Marshal.ReadInt16(dataPtr, 56);
+                ushort codeShort64 = (ushort)Marshal.ReadInt16(dataPtr, 64);
+                ushort codeShort72 = (ushort)Marshal.ReadInt16(dataPtr, 72);
 
-				stringBuilder.Append(String.Format("OpCode：{0:}，[{1:}->{2:}]", opcode, sourceActorId, targetActorId));
-				stringBuilder.Append(string.Format("(index：{0:}, id(int56)：{1:}, id(short56)：{2:}, id(short64):{3:}, id(short64)：{4:})", index, codeint56, codeShort56, codeShort64, codeShort72));
+                stringBuilder.Append(String.Format("OpCode：{0:}，[{1:}->{2:}]", opcode, sourceActorId, targetActorId));
+                stringBuilder.Append(string.Format("(index：{0:}, id(int56)：{1:}, id(short56)：{2:}, id(short64):{3:}, id(short64)：{4:})", index, codeint56, codeShort56, codeShort64, codeShort72));
 
 
-				stringBuilder.Append("： ");
-				for (int i = 0; i < 200; i++) {
-					databyte = Marshal.ReadByte(dataPtr, i);
-					stringBuilder.Append('-').Append(databyte.ToString("X"));
-				}
-				networkMessageWriter.WriteLine(stringBuilder.ToString());
-				//networkMessageWriter.WriteLine(Encoding.UTF8.GetString(databyte));
-			}
-		}
+                stringBuilder.Append("： ");
+                for (int i = 0; i < 200; i++) {
+                    databyte = Marshal.ReadByte(dataPtr, i);
+                    stringBuilder.Append('-').Append(databyte.ToString("X"));
+                }
+                networkMessageWriter.WriteLine(stringBuilder.ToString());
+                //networkMessageWriter.WriteLine(Encoding.UTF8.GetString(databyte));
+            }
+        }
 
-		public static IDalamudTextureWrap? GetIcon(uint iconId, bool isHq = false) {
-			if (iconId == 0) { return null; }
-			if (!isHq && iconList.TryGetValue(iconId, out var nqicon)) { return nqicon; }
-			if (isHq && hqIconList.TryGetValue(iconId, out var hqIcon)) { return hqIcon; }
-			IDalamudTextureWrap? icon = GetIconStr(iconId, isHq);
-			if (icon == null) { return null; }
-			if (isHq) {
-				hqIconList.Add(iconId, icon);
-			} else {
-				iconList.Add(iconId, icon);
-			}
-			return icon;
-		}
-		private static IDalamudTextureWrap? GetIconStr(uint iconId, bool isHQ) {
-			//"ui/icon/{0:D3}000/{1}{2:D6}.tex";
-			return Svc.TextureProvider.GetTextureFromGame(string.Format("ui/icon/{0:D3}000/{1}{2:D6}_hr1.tex", iconId / 1000u, isHQ ? "hq/" : "", iconId));
-		}
-	}
+        public static IDalamudTextureWrap? GetIcon(uint iconId, bool isHq = false)
+        {
+            if (iconId == 0) {
+                return null;
+            }
+            long id = iconId;
+            if (isHq) {
+                id = -id;
+            }
+            if (iconList.TryGetValue(id, out var iconValue)) {
+                return iconValue;
+            }
+            IDalamudTextureWrap? icon = Svc.TextureProvider.GetTextureFromGame(string.Format("ui/icon/{0:D3}000/{1}{2:D6}_hr1.tex", iconId / 1000u, isHq ? "hq/" : "", iconId));
+            if (icon == null) {
+                return null;
+            }
+            iconList.Add(id, icon);
+            return icon;
+        }
+    }
 }
