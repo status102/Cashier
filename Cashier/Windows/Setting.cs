@@ -16,7 +16,7 @@ using System.Threading.Tasks;
 
 namespace Cashier.Windows
 {
-    public class Setting : IWindow
+    public sealed class Setting : IWindow
     {
         private readonly static Vector2 Window_Size = new(720, 640);
         private readonly static Vector2 Image_Size = new(54, 54);
@@ -62,7 +62,9 @@ namespace Cashier.Windows
             if (ImGui.Begin(_cashier.Name + "插件设置", ref visible)) {
                 if (ImGui.CollapsingHeader("基础设置", ImGuiTreeNodeFlags.DefaultOpen)) {
                     ImGui.Indent();
-                    if (ImGui.Checkbox("显示交易窗口", ref Config.ShowTradeWindow)) { Config.Save(); }
+                    if (ImGui.Checkbox("显示交易窗口", ref Config.ShowTradeWindow)) {
+                        Config.Save();
+                    }
 
                     #region opcode更新块
                     ImGui.Checkbox("修改Opcode", ref showOpcode);
@@ -104,12 +106,18 @@ namespace Cashier.Windows
                         _presetList.Clear();
                         Config.Save();
                     }
-                    if (ImGui.IsItemHovered()) { ImGui.SetTooltip("删除所有项目"); }
+                    if (ImGui.IsItemHovered()) {
+                        ImGui.SetTooltip("删除所有项目");
+                    }
 
                     //手动刷新价格
                     ImGui.SameLine();
-                    if (Utils.DrawIconButton(FontAwesomeIcon.Sync, -1)) { _presetList.ForEach(item => item.ItemPrice.Update(worldId)); }
-                    if (ImGui.IsItemHovered()) { ImGui.SetTooltip("重新获取所有价格(数据来自Universalis)"); }
+                    if (Utils.DrawIconButton(FontAwesomeIcon.Sync, -1)) {
+                        _presetList.ForEach(item => item.ItemPrice.Update(worldId));
+                    }
+                    if (ImGui.IsItemHovered()) {
+                        ImGui.SetTooltip("重新获取所有价格(数据来自Universalis)");
+                    }
 
                     //导出到剪贴板
                     ImGui.SameLine();
@@ -117,7 +125,9 @@ namespace Cashier.Windows
                         ImGui.SetClipboardText(JsonConvert.SerializeObject(_presetList));
                         Chat.PrintLog($"导出{_presetList.Count}个预设至剪贴板");
                     }
-                    if (ImGui.IsItemHovered()) { ImGui.SetTooltip("导出到剪贴板"); }
+                    if (ImGui.IsItemHovered()) {
+                        ImGui.SetTooltip("导出到剪贴板");
+                    }
 
                     //从剪贴板导入
                     ImGui.SameLine();
@@ -140,11 +150,15 @@ namespace Cashier.Windows
                         }
                         Config.Save();
                     }
-                    if (ImGui.IsItemHovered()) { ImGui.SetTooltip("从剪贴板导入"); }
+                    if (ImGui.IsItemHovered()) {
+                        ImGui.SetTooltip("从剪贴板导入");
+                    }
 
                     ImGui.SameLine();
                     ImGui.TextDisabled("(?)");
-                    if (ImGui.IsItemHovered()) { ImGui.SetTooltip("双击鼠标左键物品编辑物品名，单击鼠标右键打开详细编辑\n不同价格方案间以;分割\n当最低价低于设定价格时，标黄进行提醒"); }
+                    if (ImGui.IsItemHovered()) {
+                        ImGui.SetTooltip("双击鼠标左键物品编辑物品名，单击鼠标右键打开详细编辑\n不同价格方案间以;分割\n当最低价低于设定价格时，标黄进行提醒");
+                    }
                     #endregion
 
                     //添加or编辑预期中
@@ -156,8 +170,10 @@ namespace Cashier.Windows
                             rowIndex = 0;
                         }
 
-                        if (rowIndex > 0)
+                        if (rowIndex > 0) {
                             ImGui.SameLine(rowIndex * (Item_Width + Item_Internal) + 8);
+                        }
+
                         rowIndex++;
 
                         DrawItemBlock(i, _presetList[i]);
@@ -249,7 +265,9 @@ namespace Cashier.Windows
         /// <param name="item"></param>
         private unsafe void DrawItemBlock(int index, Preset item)
         {
-            if (item.Id == 0) { return; }
+            if (item.Id == 0) {
+                return;
+            }
             ImGui.PushID(index);
 
             if (ImGui.BeginChild($"##ItemBlock-{index}", new(Item_Width, Image_Size.Y + 16), true)) {
@@ -348,6 +366,8 @@ namespace Cashier.Windows
                 OpcodeUtils.Cancel();
             }
         }
+
+        #region 获取opcode
 
         private void DrawOpcodeBlock()
         {
@@ -485,7 +505,6 @@ namespace Cashier.Windows
             downloadingOpcode = false;
         }
 
-
-
+        #endregion
     }
 }
