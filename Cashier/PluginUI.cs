@@ -13,9 +13,8 @@ using Cashier.Windows;
 
 namespace Cashier
 {
-    public unsafe class PluginUI : IDisposable
+	public unsafe class PluginUI : IDisposable
 	{
-		public readonly static char[] intToHex = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 		private Configuration config;
 		// 测试用opcode黑名单
 		private readonly static int[] blackList = [673, 379, 521, 572, 113, 241, 280, 169, 504, 642, 911, 365];
@@ -82,7 +81,7 @@ namespace Cashier
 				stringBuilder.Append("： ");
 				for (int i = 0; i < 200; i++) {
 					databyte = Marshal.ReadByte(dataPtr, i);
-					stringBuilder.Append('-').Append(intToHex[databyte / 16]).Append(intToHex[databyte % 16]);
+					stringBuilder.Append('-').Append(databyte.ToString("X"));
 				}
 				networkMessageWriter.WriteLine(stringBuilder.ToString());
 				//networkMessageWriter.WriteLine(Encoding.UTF8.GetString(databyte));
