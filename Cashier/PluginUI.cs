@@ -104,8 +104,7 @@ namespace Cashier
 		}
 		private static IDalamudTextureWrap? GetIconStr(uint iconId, bool isHQ) {
 			//"ui/icon/{0:D3}000/{1}{2:D6}.tex";
-			return null;
-			//return Svc.TextureProvider.GetTextureFromGame(string.Format("ui/icon/{0:D3}000/{1}{2:D6}_hr1.tex", iconId / 1000u, isHQ ? "hq/" : "", iconId));
+			return Svc.TextureProvider.GetTextureFromGame(string.Format("ui/icon/{0:D3}000/{1}{2:D6}_hr1.tex", iconId / 1000u, isHQ ? "hq/" : "", iconId));
 		}
 	}
 }
