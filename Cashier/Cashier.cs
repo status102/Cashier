@@ -1,5 +1,4 @@
 ﻿using Cashier.Commons;
-using Dalamud.Game.Addon.Events;
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Command;
 using Dalamud.Plugin;
@@ -64,7 +63,7 @@ namespace Cashier
 			HookHelper = new(this);
 
 			if (!GenericHelpers.TryGetAddonByName<AtkUnitBase>("Trade", out var addon)) {
-				Svc.ChatGui.Print("没找到注入");
+				//Svc.ChatGui.Print("没找到注入");
 				// 无用
 			} else {
 		}
@@ -123,7 +122,8 @@ namespace Cashier
 
 		private void DrawUI()
 		{
-			PluginUi.Draw();
+			// todo 有Bug system.nullReference
+			//PluginUi.Draw();
 		}
 
 		private void DrawConfigUI()

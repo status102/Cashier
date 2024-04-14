@@ -17,10 +17,11 @@ namespace Cashier
 	{
 		public readonly static char[] intToHex = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
 		private Configuration config;
-		private readonly static int[] blackList = { 673, 379, 521, 572, 113, 241, 280, 169, 504, 642, 911, 365 };
+		// 测试用opcode黑名单
+		private readonly static int[] blackList = [673, 379, 521, 572, 113, 241, 280, 169, 504, 642, 911, 365];
 
-		private readonly static Dictionary<uint, IDalamudTextureWrap?> iconList = new();
-		private readonly static Dictionary<uint, IDalamudTextureWrap?> hqIconList = new();
+		private readonly static Dictionary<uint, IDalamudTextureWrap?> iconList = [];
+		private readonly static Dictionary<uint, IDalamudTextureWrap?> hqIconList = [];
 		public History History { get; init; }
 		public Trade Trade { get; init; }
 		public Setting Setting { get; init; }
