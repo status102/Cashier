@@ -33,12 +33,12 @@ namespace Cashier.Windows
     public unsafe class Trade
     {
         private Cashier _cashier { get; init; }
+        private int[] _position = new int[2];
+        private bool _onceVisible = true;
         /// <summary>
         /// 窗口大小
         /// </summary>
         private const int Width = 540, Height = 560;
-        private int[] position = new int[2];
-        private bool onceVisible = true;
         /// <summary>
         /// 显示价格的颜色，RBGA
         /// 绿色为设定HQ但交易NQ；黄色为设定NQ但交易HQ
@@ -49,7 +49,7 @@ namespace Cashier.Windows
         private const int RowWidth = 30;
         private readonly static Vector2 ImageSize = new(26, 26);
         private readonly Lazy<IDalamudTextureWrap?> GilImage = new(PluginUI.GetIcon(65002));
-        private readonly Timer RefreshTimer = new(100) { AutoReset = true };
+        private readonly Timer _refreshTimer = new(100) { AutoReset = true };
 
         /// <summary>
         /// 是否交易中
@@ -105,7 +105,6 @@ namespace Cashier.Windows
         private AgentEventHandlerHook hook;
         private readonly nint agentTradePtr;
         private AtkUnitBase* addonTrade;
-        private nint targetObjectId;
 
         #region Init
         private DalamudLinkPayload Payload { get; init; }
@@ -118,7 +117,7 @@ namespace Cashier.Windows
             hook = new(AgentId.Trade, TradeCallback);
 
             agentTradePtr = (nint)AgentModule.Instance()->GetAgentByInternalId(AgentId.Trade);
-            RefreshTimer.Elapsed += (_, __) => RefreshData();
+            _refreshTimer.Elapsed += (_, __) => RefreshData();
         }
 
         public void Dispose()
@@ -126,25 +125,27 @@ namespace Cashier.Windows
             Svc.GameNetwork.NetworkMessage -= NetworkMessageDelegate;
             _cashier.PluginInterface.RemoveChatLinkHandler(0);
             hook.Dispose();
-            RefreshTimer.Dispose();
+            _refreshTimer.Dispose();
         }
         #endregion
 
 
         public unsafe void Draw()
         {
-            if (!Config.ShowTradeWindow || !_isTrading || !onceVisible) { return; }
-            if (position[0] == int.MinValue) {
+            if (!Config.ShowTradeWindow || !_isTrading || !_onceVisible) {
+                return;
+            }
+            if (_position[0] == int.MinValue) {
                 if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("Trade", out var addonPtr) && addonPtr->UldManager.LoadedState == AtkLoadState.Loaded) {
-                    position[0] = addonPtr->X - Width - 5;
-                    position[1] = addonPtr->Y + 2;
+                    _position[0] = addonPtr->X - Width - 5;
+                    _position[1] = addonPtr->Y + 2;
                 } else {
                     return;
                 }
             }
             ImGui.SetNextWindowSize(new Vector2(Width, Height), ImGuiCond.Appearing);
-            ImGui.SetNextWindowPos(new Vector2(position[0], position[1]), ImGuiCond.Always);
-            if (ImGui.Begin("玩家交易", ref onceVisible, ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar)) {
+            ImGui.SetNextWindowPos(new Vector2(_position[0], _position[1]), ImGuiCond.Always);
+            if (ImGui.Begin("玩家交易", ref _onceVisible, ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar)) {
                 ImGui.TextUnformatted("<--");
 
                 ImGui.SameLine(ImGui.GetColumnWidth() - 90);
@@ -291,7 +292,9 @@ namespace Cashier.Windows
                 ImGui.TableNextRow(ImGuiTableRowFlags.None, RowWidth);
                 ImGui.TableNextColumn();
 
-                if (GilImage != null) { ImGui.Image(GilImage.Value.ImGuiHandle, ImageSize); }
+                if (GilImage != null) {
+                    ImGui.Image(GilImage.Value.ImGuiHandle, ImageSize);
+                }
 
                 ImGui.TableNextColumn();
                 ImGui.TextUnformatted($"{gil:#,0}");
@@ -500,8 +503,8 @@ namespace Cashier.Windows
         {
             _tradeItemList = [[new(), new(), new(), new(), new()], [new(), new(), new(), new(), new()]];
             _tradeGil = new uint[2];
-            onceVisible = true;
-            position = [int.MinValue, int.MinValue];
+            _onceVisible = true;
+            _position = [int.MinValue, int.MinValue];
             _success = false;
             worldId = Svc.ClientState.LocalPlayer?.HomeWorld.Id ?? 0;
         }
@@ -550,6 +553,8 @@ namespace Cashier.Windows
                 }
             }
         }
+
+        #region 构建输出
 
         /// <summary>
         /// 输出单次交易的内容
@@ -693,6 +698,8 @@ namespace Cashier.Windows
             return builder;
         }
 
+        #endregion
+
         /// <summary>
         /// 点击输出内容中的交易对象
         /// </summary>
@@ -768,7 +775,6 @@ namespace Cashier.Windows
         /// <param name="objectId"></param>
         public void SetTradeTarget(nint objectId)
         {
-            targetObjectId = objectId;
             var player = Svc.ObjectTable.FirstOrDefault(i => i.ObjectId == objectId) as PlayerCharacter;
             if (player != null) {
                 if (player.ObjectId != Svc.ClientState.LocalPlayer?.ObjectId) {

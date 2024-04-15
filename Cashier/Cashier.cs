@@ -119,7 +119,6 @@ namespace Cashier
 
         private void DrawUI()
         {
-            // todo 有Bug system.nullReference
             PluginUi.Draw();
         }
 
