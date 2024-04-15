@@ -1,7 +1,9 @@
 ﻿using Dalamud.Game.Text;
+using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Interface;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using ImGuiNET;
+using System.Runtime.InteropServices;
 
 namespace Cashier.Commons
 {
@@ -9,21 +11,22 @@ namespace Cashier.Commons
     {
         public static bool DrawIconButton(FontAwesomeIcon icon, int? id = null, string? label = null)
         {
-            if (id != null) { ImGui.PushID((int)id); }
+            if (id != null) {
+                ImGui.PushID((int)id);
+            }
             ImGui.PushFont(UiBuilder.IconFont);
             string buildStr;
-            if (label != null)
-            {
+            if (label != null) {
                 buildStr = icon.ToIconString() + ("##" + label ?? "");
-            }
-            else
-            {
+            } else {
                 buildStr = icon.ToIconString();
             }
             bool _return = ImGui.Button(buildStr);
 
             ImGui.PopFont();
-            if (id != null) { ImGui.PopID(); }
+            if (id != null) {
+                ImGui.PopID();
+            }
             return _return;
         }
         /// <summary>
@@ -37,5 +40,21 @@ namespace Cashier.Commons
             return InventoryManager.Instance()->GetInventoryContainer(page)->GetInventorySlot(index);
         }
 
+        public static unsafe SeString ReadSeString(byte* ptr)
+        {
+            var offset = 0;
+            while (true) {
+                var b = *(ptr + offset);
+                if (b == 0) {
+                    break;
+                }
+
+                offset += 1;
+            }
+
+            var bytes = new byte[offset];
+            Marshal.Copy(new nint(ptr), bytes, 0, offset);
+            return SeString.Parse(bytes);
+        }
     }
 }

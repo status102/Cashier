@@ -10,6 +10,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net.Http;
 using System.Numerics;
 
 namespace Cashier.Windows
@@ -50,7 +51,7 @@ namespace Cashier.Windows
                 return;
             }
             ImGui.SetNextWindowSize(Window_Size, ImGuiCond.Once);
-            if (ImGui.Begin($"###{_cashier.Name}Config", ref _visible)) {
+            if (ImGui.Begin($"设置##{_cashier.Name}Config", ref _visible)) {
                 if (ImGui.CollapsingHeader("基础设置", ImGuiTreeNodeFlags.DefaultOpen)) {
                     ImGui.Indent();
                     if (ImGui.Checkbox("显示交易窗口", ref Config.ShowTradeWindow)) {
@@ -343,7 +344,7 @@ namespace Cashier.Windows
             }
             return resultList;
         }
-        public void Dispose() { }
+        public void Dispose()        {        }
 
     }
 }

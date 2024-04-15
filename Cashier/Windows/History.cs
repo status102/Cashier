@@ -46,7 +46,7 @@ namespace Cashier.Windows
                 if (target == null) { if (ImGui.Button("全部清除")) { ClearHistory(); } } else {
                     if (ImGui.Button("清除当前目标")) {
                         ClearHistory(target);
-                        ShowHistory();
+                        Show();
                     }
                 }
 
@@ -60,14 +60,14 @@ namespace Cashier.Windows
                 if (ImGui.BeginCombo("筛选目标", target ?? string.Empty)) {
                     if (ImGui.Selectable(" ", target == null)) {
                         if (target != null) {
-                            ShowHistory();
+                            Show();
                         }
                     }
                     foreach (var targetName in historyTargetSet) {
                         var isSelected = (target ?? string.Empty) == targetName;
                         if (ImGui.Selectable(targetName, isSelected)) {
                             if (!isSelected) {
-                                ShowHistory(targetName);
+                                Show(targetName);
                             }
                         }
                     }
@@ -95,7 +95,7 @@ namespace Cashier.Windows
 
         }
 
-        public void ShowHistory(string? target = null)
+        public void Show(string? target = null)
         {
             if (!visible) {
                 visible = true;

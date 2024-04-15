@@ -43,7 +43,7 @@ namespace Cashier
             Svc.ClientState.Login += OnLogin;
             Svc.ClientState.Logout += OnLogout;
 
-            PluginUi = new PluginUI(this, Config);
+            PluginUi = new PluginUI(this);
             homeWorldId = Svc.ClientState.LocalPlayer?.HomeWorld.Id ?? homeWorldId;
 
             ECommonsMain.Init(pluginInterface, this);
@@ -70,7 +70,7 @@ namespace Cashier
         {
             string arg = args.Trim().Replace("\"", string.Empty);
             if (string.IsNullOrEmpty(arg)) {
-                PluginUi.History.ShowHistory();
+                PluginUi.Main.Show();
             } else if (arg == "cfg" || arg == "config") {
                 PluginUi.Setting.Show();
             } else if (arg == "t") {

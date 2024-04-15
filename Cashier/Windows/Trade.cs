@@ -166,7 +166,7 @@ namespace Cashier.Windows
                 // 显示当前交易对象的记录
                 ImGui.SameLine();
                 if (ImGuiComponents.IconButton(FontAwesomeIcon.History)) {
-                    _cashier.PluginUi.History.ShowHistory(target.PlayerName + "@" + target.WorldName);
+                    _cashier.PluginUi.History.Show(target.PlayerName + "@" + target.WorldName);
                 }
                 if (ImGui.IsItemHovered()) {
                     ImGui.SetTooltip("显示当前交易对象的交易记录");
@@ -567,7 +567,7 @@ namespace Cashier.Windows
         {
             PlayerPayload? payload = (PlayerPayload?)str.Payloads.Find(i => i.Type == PayloadType.Player);
             if (payload != null) {
-                _cashier.PluginUi.History.ShowHistory(payload.PlayerName + "@" + payload.World.Name.RawString);
+                _cashier.PluginUi.History.Show(payload.PlayerName + "@" + payload.World.Name.RawString);
             } else {
                 Commons.Chat.PrintError("未找到交易对象");
                 Svc.PluginLog.Verbose($"未找到交易对象，data=[{str.ToJson()}]");

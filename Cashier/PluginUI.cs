@@ -11,9 +11,8 @@ using System.Text;
 
 namespace Cashier
 {
-    public unsafe class PluginUI : IDisposable
+    public sealed unsafe class PluginUI : IDisposable
     {
-        private Configuration config;
         // 测试用opcode黑名单
         private readonly static int[] blackList = [673, 379, 521, 572, 113, 241, 280, 169, 504, 642, 911, 365];
 
@@ -21,17 +20,18 @@ namespace Cashier
         public History History { get; init; }
         public Trade Trade { get; init; }
         public Setting Setting { get; init; }
+        public Main Main { get; init; }
 
         //public AtkArrayDataHolder* atkArrayDataHolder { get; init; } = null;
 
         public StreamWriter? networkMessageWriter;
 
-        public unsafe PluginUI(Cashier TradeRecorder, Configuration configuration)
+        public unsafe PluginUI(Cashier cashier)
         {
-            this.config = configuration;
-            Trade = new(TradeRecorder);
-            History = new(TradeRecorder);
-            Setting = new(TradeRecorder);
+            Trade = new(cashier);
+            History = new(cashier);
+            Setting = new(cashier);
+            Main = new(cashier);
 
             //var atkArrayDataHolder = &Framework.Instance()->GetUiModule()->GetRaptureAtkModule()->AtkModule.AtkArrayDataHolder;
             //if (atkArrayDataHolder != null && atkArrayDataHolder->StringArrayCount > 0) { this.atkArrayDataHolder = atkArrayDataHolder; }
@@ -48,6 +48,8 @@ namespace Cashier
             Trade.Dispose();
             Setting.Dispose();
             History.Dispose();
+            Main.Dispose();
+
             if (networkMessageWriter != null) {
                 networkMessageWriter.Flush();
                 networkMessageWriter.Close();
@@ -72,6 +74,7 @@ namespace Cashier
             } catch (Exception e) {
                 Svc.PluginLog.Warning("SettingDraw出错", e);
             }
+            Main?.Draw();
         }
 
         public unsafe void NetworkMessageDelegate(IntPtr dataPtr, ushort opcode, uint sourceActorId, uint targetActorId, NetworkMessageDirection direction)
