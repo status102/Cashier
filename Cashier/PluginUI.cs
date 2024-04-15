@@ -57,9 +57,21 @@ namespace Cashier
 
         public void Draw()
         {
-            Trade?.Draw();
-            History?.Draw();
-            Setting?.Draw();
+            try {
+                Trade?.Draw();
+            } catch (Exception e) {
+                Svc.PluginLog.Warning("TradeDraw出错", e);
+            }
+            try {
+                History?.Draw();
+            } catch (Exception e) {
+                Svc.PluginLog.Warning("HistoryDraw出错", e);
+            }
+            try {
+                Setting?.Draw();
+            } catch (Exception e) {
+                Svc.PluginLog.Warning("SettingDraw出错", e);
+            }
         }
 
         public unsafe void NetworkMessageDelegate(IntPtr dataPtr, ushort opcode, uint sourceActorId, uint targetActorId, NetworkMessageDirection direction)

@@ -1,4 +1,5 @@
-﻿using Dalamud.Hooking;
+﻿using Cashier.Windows;
+using Dalamud.Hooking;
 using Dalamud.Utility.Signatures;
 using System;
 using System.Runtime.InteropServices;
@@ -8,6 +9,7 @@ namespace Cashier.Commons
     public sealed class HookHelper : IDisposable
     {
         private readonly Cashier _cashier;
+        private Trade Trade => _cashier.PluginUi.Trade;
         private bool _isDisposed;
 
         public HookHelper(Cashier cashier)
@@ -51,7 +53,7 @@ namespace Cashier.Commons
         private nint DetourResetSlot(nint a)
         {
             //Svc.PluginLog.Information($"一个格子被清空: {a:X}");
-            _cashier.PluginUi.Trade.ClearTradeSlotItem(a);
+            Trade.ClearTradeSlotItem(a);
             return _resetSlotHook!.Original(a);
         }
 
@@ -63,7 +65,7 @@ namespace Cashier.Commons
             // 未能读取到物品数量，暂时搁置
             //Svc.PluginLog.Debug($"一个格子设置: {a:X}, itemId:{itemId}, a3:{a3}, a4:{a4}, a5:{a5}");
 
-            _cashier.PluginUi.Trade.SetTradeSlotItem(a, (int)itemId);
+            Trade.SetTradeSlotItem(a, (int)itemId);
 
             return _setSlotItemIdHook!.Original(a, itemId, a3, a4, a5);
         }
@@ -73,9 +75,11 @@ namespace Cashier.Commons
         private delegate nint SetSlotItemCount2(nint a1, nint a2, nint a3, int a4);
         private nint DetourSetSlotItemCount2(nint a1, nint a2, nint a3, int a4)
         {
+#if DEBUG
             if (((Marshal.ReadByte(a3) & 0x0F) != 0x00) && Marshal.ReadInt32(a3 + 8) > 0) {
                 Svc.PluginLog.Debug($"格子数量设置: {a1:X}, a2:{a2:X}, a3:{a3}, a4:{a4}, count:{(uint)Marshal.ReadInt32(a3 + 8)}, a1+16:{a1 + 16:X}, a1+16+12:{a1 + 16 + 12:X}, *(a1+16):{Marshal.ReadInt64(a1 + 16):X}");
             }
+#endif
             return _setSlotItemCount2Hook!.Original(a1, a2, a3, a4);
         }
 
@@ -85,7 +89,7 @@ namespace Cashier.Commons
         private delegate nint TradeRequest(nint a1, nint a2);
         private nint DetourTradeRequest(nint a1, nint objectId)
         {
-            _cashier.PluginUi.Trade.SetTradeTarget(objectId);
+            Trade.SetTradeTarget(objectId);
             return _tradeRequestHook!.Original(a1, objectId);
         }
 
@@ -94,16 +98,19 @@ namespace Cashier.Commons
         private delegate nint TradeStatusUpdate(nint a1, nint a2, nint a3);
         private nint DetourTradeStatusUpdate(nint a1, nint a2, nint a3)
         {
+#if DEBUG
             // a2 为ObjectId的交易对象，但是似乎源码都用的a3+40
             Svc.PluginLog.Debug($"交易状态: {a1:X}, {a2:X}, {a3:X}, {Marshal.ReadByte(a3 + 4)}");
-
+#endif
             switch (Marshal.ReadByte(a3 + 4)) {
                 case 1:
                     // 别人交易你
-                    _cashier.PluginUi.Trade.SetTradeTarget(Marshal.ReadInt32(a3 + 40));
+                    Trade.SetTradeTarget(Marshal.ReadInt32(a3 + 40));
+                    Trade.TradeBegin();
                     break;
                 case 2:
                     // 发起交易
+                    Trade.TradeBegin();
                     break;
                 case 16:
                     // case 16: 交易状态更新
@@ -114,19 +121,21 @@ namespace Cashier.Commons
                     if (a == 4 || a == 5) {
                         // 先确认条件的一边会产生一个a=4，两边都确认后发两个a=5
                         // 最终确认先确认的产生一个a=6，两边都确认后发两个a=1
-                        _cashier.PluginUi.Trade.SetTradeConfirm(Marshal.ReadInt32(a3 + 40));
+                        Trade.SetTradeConfirm(Marshal.ReadInt32(a3 + 40));
                     }
                     break;
                 case 7:
-                    // case 7: 取消交易
+                    // 取消交易
+                    Trade.TradeCancelled();
                     break;
                 case 17:
-                    // case 17: 交易成功
+                    // 交易成功
+                    Trade.TradeFinished();
                     break;
                 default:
+#if DEBUG
                     Svc.PluginLog.Debug($"交易状态: {a1:X}, {a2:X}, {a3:X}, {Marshal.ReadByte(a3 + 4)}");
-
-
+#endif
                     // case 5: 最终确认
                     break;
             }
@@ -141,7 +150,7 @@ namespace Cashier.Commons
         private delegate nint TradeOtherMoney(nint a1, nint a2);
         private nint DetourTradeOtherMoney(nint a1, nint a2)
         {
-            _cashier.PluginUi.Trade.SetTradeMoney((uint)Marshal.ReadInt32(a2 + 8), false);
+            Trade.SetTradeMoney((uint)Marshal.ReadInt32(a2 + 8), false);
             return _tradeOtherMoney!.Original(a1, a2);
         }
 
@@ -150,7 +159,7 @@ namespace Cashier.Commons
         private delegate nint TradeMyMoney(nint a1, uint a2);
         private nint DetourTradeMyMoney(nint a1, uint a2)
         {
-            _cashier.PluginUi.Trade.SetTradeMoney(a2, true);
+            Trade.SetTradeMoney(a2, true);
             return _tradeMyMoney!.Original(a1, a2);
         }
         #endregion
@@ -160,7 +169,9 @@ namespace Cashier.Commons
         private delegate void TradeCount(nint a1, int a2, int a3);
         private void DetourTradeCount(nint a1, int a2, int a3)
         {
+#if DEBUG
             Svc.PluginLog.Information($"交易 物品槽 数量: {a1:X}, {a2:X}, {a3}");
+#endif
             _tradeCountHook!.Original(a1, a2, a3);
         }
     }

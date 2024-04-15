@@ -1,12 +1,8 @@
 ﻿using Cashier.Commons;
 using Cashier.Model;
-using Cashier.Model.FFXIV;
 using Cashier.Models;
 using Cashier.Universalis;
-using Dalamud.Game.Addon.Lifecycle;
-using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using Dalamud.Game.ClientState.Objects.SubKinds;
-using Dalamud.Game.Network;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
 using Dalamud.Game.Text.SeStringHandling.Payloads;
@@ -14,7 +10,6 @@ using Dalamud.Interface;
 using Dalamud.Interface.Components;
 using Dalamud.Interface.Internal;
 using ECommons;
-using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ImGuiNET;
@@ -25,8 +20,6 @@ using System.Linq;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Timers;
-using static Cashier.Commons.AgentEventHandlerHook;
-using ValueType = FFXIVClientStructs.FFXIV.Component.GUI.ValueType;
 
 namespace Cashier.Windows
 {
@@ -102,19 +95,16 @@ namespace Cashier.Windows
         /// </summary>
         private ushort targetRound = 0;
         private readonly object targetRoundLock = new();
-        private AgentEventHandlerHook hook;
         private readonly nint agentTradePtr;
         private AtkUnitBase* addonTrade;
 
         #region Init
-        private DalamudLinkPayload Payload { get; init; }
+        private DalamudLinkPayload _payload { get; init; }
         private Configuration Config => _cashier.Config;
         public Trade(Cashier cashier)
         {
-            this._cashier = cashier;
-            Svc.GameNetwork.NetworkMessage += NetworkMessageDelegate;
-            Payload = cashier.PluginInterface.AddChatLinkHandler(0, OnTradeTargetClick);
-            hook = new(AgentId.Trade, TradeCallback);
+            _cashier = cashier;
+            _payload = cashier.PluginInterface.AddChatLinkHandler(0, OnTradeTargetClick);
 
             agentTradePtr = (nint)AgentModule.Instance()->GetAgentByInternalId(AgentId.Trade);
             _refreshTimer.Elapsed += (_, __) => RefreshData();
@@ -122,13 +112,12 @@ namespace Cashier.Windows
 
         public void Dispose()
         {
-            Svc.GameNetwork.NetworkMessage -= NetworkMessageDelegate;
             _cashier.PluginInterface.RemoveChatLinkHandler(0);
-            hook.Dispose();
             _refreshTimer.Dispose();
         }
         #endregion
 
+        #region 绘制窗口
 
         public unsafe void Draw()
         {
@@ -144,7 +133,7 @@ namespace Cashier.Windows
                 }
             }
             ImGui.SetNextWindowSize(new Vector2(Width, Height), ImGuiCond.Appearing);
-            ImGui.SetNextWindowPos(new Vector2(_position[0], _position[1]), ImGuiCond.Always);
+            ImGui.SetNextWindowPos(new Vector2(_position[0], _position[1]), ImGuiCond.Once);
             if (ImGui.Begin("玩家交易", ref _onceVisible, ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar)) {
                 ImGui.TextUnformatted("<--");
 
@@ -336,101 +325,7 @@ namespace Cashier.Windows
             }
         }
 
-        /// <summary>
-        /// 处理自身交易栏的变化，包括水晶、金币
-        /// </summary>
-        /// <param name="bytes"></param>
-        private unsafe void UpdateMyTradeSlot(InventoryModifyHandler modify)
-        {
-            if (modify.unknown_03 == 0x10 && modify.unknown_05 == 0x03) {
-                var type = modify.unknown_04;
-                if (type == 0x02) {
-                    // 道具移动
-                    if ((uint)modify.Container >= 0 && (uint)modify.Container <= 3) {
-                        // 从背包出
-                        var item = Utils.GetInventoryItem(modify.Container, (int)modify.Slot);
-                        if (item == null) {
-                            Svc.PluginLog.Warning($"item为空[{modify.Container},{modify.Slot}]");
-                        } else {
-                            _tradeItemList[0][modify.Slot2] = new TradeItem(item->ItemID, 1, Convert.ToBoolean((uint)item->Flags & (uint)FFXIVClientStructs.FFXIV.Client.Game.InventoryItem.ItemFlags.HQ));
-                        }
-                    } else if (modify.Container == InventoryType.HandIn && modify.Container2 == InventoryType.HandIn) {
-                        // 交易栏内互相移动
-                        TradeItem a = _tradeItemList[0][modify.Slot];
-                        _tradeItemList[0][modify.Slot] = _tradeItemList[0][modify.Slot2];
-                        _tradeItemList[0][modify.Slot2] = a;
-                    } else if (modify.Container == InventoryType.HandIn) {
-                        // 删除某一栏道具
-                        _tradeItemList[0][modify.Slot] = new TradeItem();
-                    } else if (modify.Container == InventoryType.Crystals) {
-                        _tradeItemList[0][modify.Slot2] = new TradeItem((uint)(modify.Slot + 2), modify.Count);
-                    }
-                } else if (type == 0x1A) {
-                    // 变更某个格子的道具个数
-                    _tradeItemList[0][modify.Slot].Count = modify.Count;
-                } else if (type == 0x19) {
-                    // 金币
-                    _tradeGil[0] = modify.Count;
-                }
-            }
-        }
-
-        /// <summary>
-        /// 处理对方交易栏的物品变化
-        /// </summary>
-        /// <param name="bytes"></param>
-        private void UpdateOtherTradeItem(byte[] bytes)
-        {
-            // TODO 数据包拆离
-            if (bytes[3] == 0x10 && bytes[8] == 0xD9 && bytes[9] == 0x07) {
-                var list = CheckOtherTradeRound(BitConverter.ToUInt16(bytes));
-
-                var slot = BitConverter.ToUInt16(bytes, 0x0A);
-                var count = BitConverter.ToUInt32(bytes, 0x0C);
-                var itemId = BitConverter.ToUInt16(bytes, 0x10);
-                var isHq = bytes[0x20];
-
-                Svc.PluginLog.Verbose($"[{BitConverter.ToUInt16(bytes)}]对方物品:[{slot}]{itemId}-{count}");
-                list[slot] = new TradeItem(itemId, count, Convert.ToBoolean(isHq));
-            }
-        }
-
-        /// <summary>
-        /// 处理对方交易栏的水晶、金币变化
-        /// </summary>
-        /// <param name="bytes"></param>
-        private void UpdateOtherTradeMoney(byte[] bytes)
-        {
-            // TODO 数据包拆离
-            if (bytes[3] == 0x10 && bytes[4] == 0xD9 && bytes[5] == 0x07) {
-                var list = CheckOtherTradeRound(BitConverter.ToUInt16(bytes));
-
-                var slot = BitConverter.ToUInt16(bytes, 6);// 对方交易栏槽位，0-4是格子，5是金币
-                var count = BitConverter.ToUInt32(bytes, 8);// 物品数量
-
-                if (slot == 5) {
-                    _tradeGil[1] = count;
-                } else {
-                    var itemId = BitConverter.ToUInt16(bytes, 0x10);
-                    list[slot] = new TradeItem(itemId, count);
-                }
-
-            }
-        }
-
-        /// <summary>
-        /// 检查对方交易栏数据包序号是否更新，更新则需要清除现有数据重新记录
-        /// </summary>
-        /// <param name="index">序号，暂时认为是2字节</param>
-        private TradeItem[] CheckOtherTradeRound(ushort index)
-        {
-            if (index != targetRound) {
-                targetRound = index;
-                _tradeItemList[1] = [new(), new(), new(), new(), new()];
-                _tradeGil[1] = 0;
-            }
-            return _tradeItemList[1];
-        }
+        #endregion
 
         /// <summary>
         /// 交易结算
@@ -484,12 +379,11 @@ namespace Cashier.Windows
                 }
             }
 
-            Commons.Chat.PrintLog("交易结束" + target.PlayerName);
             // todo 恢复结束输出
             if (lastTarget == target) {
-                //Svc.ChatGui.Print(BuildMultiTradeSeString(Payload, status, target, list, gil, multiItemList, multiGil).BuiltString);
+                Svc.ChatGui.Print(BuildMultiTradeSeString(_payload, status, target, list, gil, multiItemList, multiGil).BuiltString);
             } else {
-                //Svc.ChatGui.Print(BuildTradeSeString(Payload, status, target, list, gil).BuiltString);
+                Svc.ChatGui.Print(BuildTradeSeString(_payload, status, target, list, gil).BuiltString);
             }
             if (status) {
                 lastTarget = target;
@@ -509,51 +403,6 @@ namespace Cashier.Windows
             worldId = Svc.ClientState.LocalPlayer?.HomeWorld.Id ?? 0;
         }
 
-        /// <summary>
-        /// 交易目标id
-        /// </summary>
-        /// <param name="bytes"></param>
-        private void ReceiveTargetID(byte[] bytes)
-        {
-            // TODO 数据包拆离
-            if (bytes[4] == 0x10 && bytes[5] == 0x03) {
-                var id = BitConverter.ToUInt32(bytes, 40);
-                var player = Svc.ObjectTable.FirstOrDefault(i => i.ObjectId == id) as PlayerCharacter;
-                if (player != null) {
-                    if (player.ObjectId != Svc.ClientState.LocalPlayer?.ObjectId) {
-                        var world = Svc.DataManager.GetExcelSheet<World>()?.FirstOrDefault(r => r.RowId == player.HomeWorld.Id);
-                        //target = (player.HomeWorld.Id, player.Name.TextValue, world?.Name ?? "<Unknown>");
-                    }
-                }
-            }
-        }
-
-        private unsafe void NetworkMessageDelegate(IntPtr dataPtr, ushort opcode, uint sourceActorId, uint targetActorId, NetworkMessageDirection direction)
-        {
-            if (_isTrading) {
-                if (opcode == Config.OpcodeOfInventoryModifyHandler) {
-                    UpdateMyTradeSlot(Marshal.PtrToStructure<InventoryModifyHandler>(dataPtr));
-                } else if (opcode == Config.OpcodeOfItemInfo) {
-                    byte[] bytes = new byte[0x21];
-                    Marshal.Copy(dataPtr, bytes, 0, bytes.Length);
-                    UpdateOtherTradeItem(bytes);
-                } else if (opcode == Config.OpcodeOfCurrencyCrystalInfo) {
-                    byte[] bytes = new byte[0x12];
-                    Marshal.Copy(dataPtr, bytes, 0, bytes.Length);
-                    UpdateOtherTradeMoney(bytes);
-                } else if (opcode == Config.OpcodeOfUpdateInventorySlot) {
-                    // 背包变动，交易成功且有物品进出
-                    _success = true;
-                }
-            } else {
-                if (opcode == Config.OpcodeOfTradeTargetInfo) {
-                    byte[] bytes = new byte[45];
-                    Marshal.Copy(dataPtr, bytes, 0, bytes.Length);
-                    ReceiveTargetID(bytes);
-                }
-            }
-        }
-
         #region 构建输出
 
         /// <summary>
@@ -564,7 +413,7 @@ namespace Cashier.Windows
         /// <param name="items">交易物品</param>
         /// <param name="gil">交易金币</param>
         /// <returns></returns>
-        private static SeStringBuilder BuildTradeSeString(DalamudLinkPayload payload, bool status, (uint, string, string) target, TradeItem[][] items, uint[] gil)
+        private static SeStringBuilder BuildTradeSeString(DalamudLinkPayload payload, bool status, TradeTarget target, TradeItem[][] items, uint[] gil)
         {
             if (items.Length == 0 || gil.Length == 0) {
                 return new SeStringBuilder().AddText($"[{Cashier.PluginName}]").AddUiForeground("获取交易内容失败", 17);
@@ -573,9 +422,12 @@ namespace Cashier.Windows
                 .AddUiForeground($"[{Cashier.PluginName}]", 45)
                 .AddText(SeIconChar.ArrowRight.ToIconString())
                 .Add(payload)
-                .AddUiForeground(1).Add(new PlayerPayload(target.Item2, target.Item1)).AddUiForegroundOff();
-            if (target.Item1 != Svc.ClientState.LocalPlayer?.HomeWorld.Id) {
-                builder.Add(new IconPayload(BitmapFontIcon.CrossWorld)).AddText(target.Item3);
+                .AddUiForeground(1)
+                .Add(new PlayerPayload(target.PlayerName!, (uint)target.WorldId!))
+                .AddUiForegroundOff();
+            if (target.WorldId != Svc.ClientState.LocalPlayer?.HomeWorld.Id) {
+                builder.Add(new IconPayload(BitmapFontIcon.CrossWorld))
+                    .AddText(target.PlayerName!);
             }
             builder.Add(RawPayload.LinkTerminator);
             if (!status) {
@@ -585,15 +437,15 @@ namespace Cashier.Windows
             if (gil[0] != 0 || items[0].Length != 0) {
                 builder.Add(new NewLinePayload());
                 builder.AddText("<<==  ");
-                if (gil[0] != 0) { builder.AddText($"{gil[0]:#,0}{(char)SeIconChar.Gil}"); }
+                if (gil[0] != 0) {
+                    builder.AddText($"{gil[0]:#,0}{(char)SeIconChar.Gil}");
+                }
                 for (int i = 0; i < items[0].Length; i++) {
                     if (i != 0 || gil[0] != 0) {
                         builder.AddText(", ");
                     }
                     var name = items[0][i].Name + (items[0][i].Quality ? SeIconChar.HighQuality.ToIconString() : string.Empty) + "x" + items[0][i].Count;
-                    builder.AddItemLink(items[0][i].Id, items[0][i].Quality)
-                        .AddUiForeground(SeIconChar.LinkMarker.ToIconString(), 500)
-                        .AddUiForeground(name ?? "???", 1)
+                    builder.AddItemLink(items[0][i].Id, items[0][i].Quality, name)
                         .Add(RawPayload.LinkTerminator);
                 }
             }
@@ -601,14 +453,16 @@ namespace Cashier.Windows
             // 支付
             if (gil[1] != 0 || items[1].Length != 0) {
                 builder.Add(new NewLinePayload());
-                builder.AddText("==>>  ");
-                if (gil[1] != 0) { builder.AddText($"{gil[1]:#,0}{(char)SeIconChar.Gil}"); }
+                builder.AddText("==>>  " + FontAwesomeIcon.ArrowRightLong.ToIconString());
+                if (gil[1] != 0) {
+                    builder.AddText($"{gil[1]:#,0}{(char)SeIconChar.Gil}");
+                }
                 for (int i = 0; i < items[1].Length; i++) {
-                    if (i != 0 || gil[1] != 0) { builder.AddText(", "); }
+                    if (i != 0 || gil[1] != 0) {
+                        builder.AddText(", ");
+                    }
                     var name = items[1][i].Name + (items[1][i].Quality ? SeIconChar.HighQuality.ToIconString() : string.Empty) + "x" + items[1][i].Count;
-                    builder.AddItemLink(items[1][i].Id, items[1][i].Quality)
-                        .AddUiForeground(SeIconChar.LinkMarker.ToIconString(), 500)
-                        .AddUiForeground(name ?? "???", 1)
+                    builder.AddItemLink(items[1][i].Id, items[1][i].Quality, name)
                         .Add(RawPayload.LinkTerminator);
                 }
             }
@@ -625,10 +479,12 @@ namespace Cashier.Windows
         /// <param name="multiItems">累积交易物品</param>
         /// <param name="multiGil">累积交易金币</param>
         /// <returns></returns>
-        private static SeStringBuilder BuildMultiTradeSeString(DalamudLinkPayload payload, bool status, (uint, string, string) target, TradeItem[][] items, uint[] gil, Dictionary<uint, RecordItem>[] multiItems, uint[] multiGil)
+        private static SeStringBuilder BuildMultiTradeSeString(DalamudLinkPayload payload, bool status, TradeTarget target, TradeItem[][] items, uint[] gil, Dictionary<uint, RecordItem>[] multiItems, uint[] multiGil)
         {
             if (items.Length == 0 || gil.Length != 2 || multiItems.Length == 0 || multiGil.Length != 2) {
-                return new SeStringBuilder().AddText($"[{Cashier.PluginName}]").AddUiForeground("获取交易内容失败", 17);
+                return new SeStringBuilder()
+                    .AddText($"[{Cashier.PluginName}]")
+                    .AddUiForeground("获取交易内容失败", 17);
             }
             var builder = BuildTradeSeString(payload, status, target, items, gil);
             builder.Add(new NewLinePayload()).AddText("连续交易:");
@@ -636,7 +492,9 @@ namespace Cashier.Windows
             // 获得
             if (multiGil[0] != 0 || multiItems[0].Count != 0) {
                 builder.Add(new NewLinePayload()).AddText("<<==  ");
-                if (multiGil[0] != 0) { builder.AddText($"{multiGil[0]:#,0}{(char)SeIconChar.Gil}"); }
+                if (multiGil[0] != 0) {
+                    builder.AddText($"{multiGil[0]:#,0}{(char)SeIconChar.Gil}");
+                }
 
                 foreach (var itemId in multiItems[0].Keys) {
                     var item = multiItems[0][itemId];
@@ -716,58 +574,48 @@ namespace Cashier.Windows
             }
         }
 
-        public void TradeShow(AddonEvent _, AddonArgs __)
-        {
-            if (!_isTrading) {
-                Reset();
-                _isTrading = true;
-                Commons.Chat.PrintMsg("交易开始");
-                Svc.PluginLog.Verbose("交易开始");
-
-                if (addonTrade == default) {
-                    addonTrade = (AtkUnitBase*)Svc.GameGui.GetAddonByName("Trade");
-                }
-            }
-        }
-
-        public void TradeHide(AddonEvent _, AddonArgs __)
+        public void TradeBegin()
         {
             if (_isTrading) {
-                _isTrading = false;
-                Finish(_success);
-                Commons.Chat.PrintMsg("交易窗口关闭");
-                Svc.PluginLog.Verbose("交易窗口关闭");
+                // 上次交易未结束
+                Svc.PluginLog.Warning("上次交易未结束时开始交易");
+                return;
+            }
+
+            Svc.PluginLog.Debug("交易开始");
+            _isTrading = true;
+            _refreshTimer.Start();
+            Reset();
+
+            if (addonTrade == default && GenericHelpers.TryGetAddonByName<AtkUnitBase>("Trade", out var addonPtr)) {
+                addonTrade = addonPtr;
             }
         }
 
-        public void AddonTradeReceiveEvent(AddonEvent _, AddonArgs __)
+        public void TradeCancelled()
         {
-            Commons.Chat.PrintLog("AddonReceiveEvent");
-            // 自身槽位+确认状态变动
-
-        }
-
-
-        private unsafe void TradeCallback(EventCall eventCall)
-        {
-            if (eventCall.AtkValues.Count == 2 && eventCall.AtkValues[0].Type == ValueType.Int) {
-
-                switch (eventCall.AtkValues[0].Int) {
-                    case 0:
-                        Svc.ChatGui.Print("我确认");
-                        break;
-                    case -1:
-                        //Svc.ChatGui.Print("右上角x掉");
-                        break;
-                    case 1:
-                        //Svc.ChatGui.Print("交易取消");
-                        break;
-                    default:
-                        Svc.ChatGui.Print("交易未知:" + eventCall.AtkValues[0].Int);
-                        break;
-                }
+            if (!_isTrading) {
+                // 未开始交易
+                Svc.PluginLog.Warning("未开始交易时交易被取消");
+                return;
             }
+            _isTrading = false;
+            _refreshTimer.Stop();
+            Finish(false);
         }
+
+        public void TradeFinished()
+        {
+            if (!_isTrading) {
+                // 未开始交易
+                Svc.PluginLog.Warning("未开始交易时交易完成");
+                return;
+            }
+            _isTrading = false;
+            _refreshTimer.Stop();
+            Finish(true);
+        }
+
 
         /// <summary>
         /// 设置交易目标
@@ -780,7 +628,6 @@ namespace Cashier.Windows
                 if (player.ObjectId != Svc.ClientState.LocalPlayer?.ObjectId) {
                     var world = Svc.DataManager.GetExcelSheet<World>()?.FirstOrDefault(r => r.RowId == player.HomeWorld.Id);
                     target = new(player.HomeWorld.Id, world?.Name ?? "???", objectId, player.Name.TextValue);
-                    Commons.Chat.PrintLog($"交易目标:{player.Name.TextValue}");
                 }
             } else {
                 Svc.PluginLog.Error($"找不到交易对象，id: {objectId:X}");
@@ -800,14 +647,12 @@ namespace Cashier.Windows
                 }
 
                 var countTextNode = imageNode->Component->UldManager.NodeList[6]->GetAsAtkTextNode();
-                //countTextNode->FontSize = 0.5f;
-                var count = int.TryParse(countTextNode->NodeText.ToString(), out int result) ? result : 0;
-
-                //return (agentTradePtr.TradeSlot[index].ItemId, count);
-                return 0;
+                return int.TryParse(countTextNode->NodeText.ToString(), out int result) ? result : -1;
             }
-            foreach (var item in AddonIndex) {
-                getCount(item);
+            for (int i = 0; i < 10; i++) {
+                if (_tradeItemList[i < 5 ? 0 : 1][i % 5] is TradeItem { Id: > 0 } item) {
+                    item.Count = (uint)getCount(AddonIndex[i]);
+                }
             }
         }
 
@@ -822,8 +667,10 @@ namespace Cashier.Windows
             if (index < 0 || index > 9) {
                 return;
             }
-
-            Commons.Chat.PrintLog($"一个交易物品槽被设置: {a1:X}, {itemId}, index:{index}, isHQ:{itemId > 1000001}");
+            _tradeItemList[index < 5 ? 0 : 1][index % 5] = new((uint)itemId % 1000000, 1, itemId > 1000001);
+#if DEBUG
+            Svc.PluginLog.Debug($"一个交易物品槽被设置: {a1:X}, {itemId}, index:{index}, isHQ:{itemId > 1000001}");
+#endif
         }
 
         /// <summary>
@@ -844,8 +691,10 @@ namespace Cashier.Windows
             if (Marshal.ReadInt32(a1 + 0x70) == 0) {
                 return;
             }
-
-            Commons.Chat.PrintLog($"一个交易物品槽被清空: {a1:X}, index:{index}");
+            _tradeItemList[index < 5 ? 0 : 1][index % 5] = new();
+#if DEBUG
+            Svc.PluginLog.Debug($"一个交易物品槽被清空: {a1:X}, index:{index}");
+#endif
         }
 
         /// <summary>
@@ -856,7 +705,6 @@ namespace Cashier.Windows
         public void SetTradeMoney(uint money, bool isPlayer1)
         {
             _tradeGil[isPlayer1 ? 0 : 1] = money;
-            //Commons.Chat.PrintLog($"交易金币被设置: {money}, {isPlayer1}");
         }
 
         /// <summary>

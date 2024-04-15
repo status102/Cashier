@@ -46,29 +46,9 @@ namespace Cashier
             PluginUi = new PluginUI(this, Config);
             homeWorldId = Svc.ClientState.LocalPlayer?.HomeWorld.Id ?? homeWorldId;
 
-            //Svc.AddonLifecycle.RegisterListener(AddonEvent.PostReceiveEvent, "Trade", PluginUi.Trade.TradeUpdate);
-            Svc.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "Trade", PluginUi.Trade.TradeShow);
-            Svc.AddonLifecycle.RegisterListener(AddonEvent.PreFinalize, "Trade", PluginUi.Trade.TradeHide);
-            Svc.AddonLifecycle.RegisterListener(AddonEvent.PostUpdate, "Trade", (events, args) =>
-            {
-                //Svc.PluginLog.Debug("PostUpdate");
-            });
-            Svc.AddonLifecycle.RegisterListener(AddonEvent.PostReceiveEvent, "Trade", PluginUi.Trade.AddonTradeReceiveEvent);
-            Svc.AddonLifecycle.RegisterListener(AddonEvent.PostRefresh, "Trade", (events, args) =>
-            {
-                Svc.PluginLog.Debug("PostRefresh");
-            });
-
-
             ECommonsMain.Init(pluginInterface, this);
             TaskManager = new();
             HookHelper = new(this);
-
-            if (!GenericHelpers.TryGetAddonByName<AtkUnitBase>("Trade", out var addon)) {
-                //Svc.ChatGui.Print("没找到注入");
-                // 无用
-            } else {
-            }
         }
 
         public void Dispose()
@@ -124,7 +104,7 @@ namespace Cashier
 
         private void DrawConfigUI()
         {
-            this.PluginUi.Setting.Show();
+            PluginUi.Setting.Show();
         }
 
         private void OnLogin()
