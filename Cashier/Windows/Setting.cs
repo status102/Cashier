@@ -10,9 +10,7 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using System.Numerics;
-using System.Threading.Tasks;
 
 namespace Cashier.Windows
 {
@@ -26,13 +24,6 @@ namespace Cashier.Windows
         private Configuration Config => _cashier.Config;
 
         private bool _visible = false;
-        private bool showOpcode = false;
-        private bool capturingOpcode = false;
-        private uint captureCountdown = 0;
-        /// <summary>
-        /// 正在从GitHub获取Opcode
-        /// </summary>
-        private bool downloadingOpcode = false;
 
         private string editName = "", editSetPrice = "", editSetCount = "", editStackPrice = "";
         private bool editQuality = false;
@@ -44,7 +35,7 @@ namespace Cashier.Windows
         private static IDalamudTextureWrap? FailureImage => PluginUI.GetIcon(784);
         public Setting(Cashier cashier)
         {
-            this._cashier = cashier;
+            _cashier = cashier;
         }
 
         public void Show()
@@ -65,14 +56,6 @@ namespace Cashier.Windows
                     if (ImGui.Checkbox("显示交易窗口", ref Config.ShowTradeWindow)) {
                         Config.Save();
                     }
-
-                    #region opcode更新块
-                    ImGui.Checkbox("修改Opcode", ref showOpcode);
-                    ImGui.SameLine();
-                    ImGui.TextDisabled("(?)");
-                    if (ImGui.IsItemHovered()) { ImGui.SetTooltip("每次版本更新后，请更新全部Opcode"); }
-                    if (showOpcode) { DrawOpcodeBlock(); }
-                    #endregion
                     ImGui.Unindent();
                 }
 
@@ -360,151 +343,7 @@ namespace Cashier.Windows
             }
             return resultList;
         }
-        public void Dispose()
-        {
-            if (capturingOpcode) {
-                OpcodeUtils.Cancel();
-            }
-        }
+        public void Dispose() { }
 
-        #region 获取opcode
-
-        private void DrawOpcodeBlock()
-        {
-            ImGui.SameLine();
-            ImGui.Spacing();
-            ImGui.SameLine();
-            if (!capturingOpcode) {
-                if (ImGui.Button("捕获Opcode※")) {
-                    CaptureOpcode();
-                }
-
-                ImGui.SameLine();
-                ImGui.TextDisabled("(?)");
-                if (ImGui.IsItemHovered()) {
-                    ImGui.SetTooltip("请在点击后一分钟内，与任意玩家打开交易窗口后关闭。\n无需进行实际交易行为，打开窗口后取消交易即可。");
-                }
-            } else {
-                ImGui.TextUnformatted($"正在尝试自动捕获Opcode，{captureCountdown}s后结束");
-                ImGui.BeginDisabled();
-            }
-            ImGui.SetNextItemWidth(200);
-            int targetInfo = Config.OpcodeOfTradeTargetInfo;
-            if (ImGui.InputInt("交易目标获取※", ref targetInfo)) {
-                Config.OpcodeOfTradeTargetInfo = (ushort)targetInfo;
-                Config.Save();
-            }
-            if (capturingOpcode) { ImGui.EndDisabled(); }
-
-            // 下面4个opcode已被收录，直接从GitHub上面更新
-            if (!downloadingOpcode) {
-                if (ImGui.Button("从GitHub更新以下Opcode")) {
-                    downloadingOpcode = true;
-                    Task.Run(DownloadOpcodeFromGitHub);
-                }
-            } else {
-                ImGui.TextUnformatted("正在从GitHub上更新Opcode");
-                ImGui.BeginDisabled();
-            }
-            ImGui.SetNextItemWidth(200);
-            int inventoryModifyHandler = Config.OpcodeOfInventoryModifyHandler;
-            if (ImGui.InputInt("InventoryModifyHandler", ref inventoryModifyHandler)) {
-                Config.OpcodeOfInventoryModifyHandler = (ushort)inventoryModifyHandler;
-                Config.Save();
-            }
-            ImGui.SetNextItemWidth(200);
-            int itemInfo = Config.OpcodeOfItemInfo;
-            if (ImGui.InputInt("ItemInfo", ref itemInfo)) {
-                Config.OpcodeOfItemInfo = (ushort)itemInfo;
-                Config.Save();
-            }
-            ImGui.SetNextItemWidth(200);
-            int currencyCrystalInfo = Config.OpcodeOfCurrencyCrystalInfo;
-            if (ImGui.InputInt("CurrencyCrystalInfo", ref currencyCrystalInfo)) {
-                Config.OpcodeOfCurrencyCrystalInfo = (ushort)currencyCrystalInfo;
-                Config.Save();
-            }
-            ImGui.SetNextItemWidth(200);
-            int updateInventorySlot = Config.OpcodeOfUpdateInventorySlot;
-            if (ImGui.InputInt("UpdateInventorySlot", ref updateInventorySlot)) {
-                Config.OpcodeOfUpdateInventorySlot = (ushort)updateInventorySlot;
-                Config.Save();
-            }
-            if (downloadingOpcode) { ImGui.EndDisabled(); }
-        }
-
-        private void CaptureOpcode()
-        {
-            OpcodeUtils.CaptureOpcode((status, windowOpcode, targetOpcode) =>
-            {
-                capturingOpcode = false;
-                if (!status || windowOpcode == 0 || targetOpcode == 0) {
-                    Chat.PrintWarning("自动捕获部分Opcode失败，请手动更新Opcode");
-                } else {
-                    Config.OpcodeOfTradeTargetInfo = targetOpcode;
-                    Config.Save();
-                    Chat.PrintLog("自动捕获部分Opcode成功");
-                }
-            });
-            capturingOpcode = true;
-            Task.Run(async () =>
-            {
-                captureCountdown = 60;
-                while (capturingOpcode && captureCountdown > 0) {
-                    await Task.Delay(1000);
-                    captureCountdown--;
-                }
-                if (capturingOpcode && captureCountdown == 0) { OpcodeUtils.Cancel(); }
-            });
-        }
-        /// <summary>
-        /// 从GitHub上获取部分Opcode
-        /// </summary>
-        private async void DownloadOpcodeFromGitHub()
-        {
-            try {
-                var res = await OpcodeUtils.GetOpcodesFromGitHub();
-                if (res == null) {
-                    Chat.PrintWarning("无法从GitHub获取Opcode，返回为空");
-                } else {
-                    Opcodes? opcodeInfo;
-                    if (Svc.ClientState.ClientLanguage == Dalamud.ClientLanguage.ChineseSimplified) {
-                        opcodeInfo = res.FirstOrDefault(i => i.Region.Equals("CN"));
-                    } else {
-                        opcodeInfo = res.FirstOrDefault(i => i.Region.Equals("Global"));
-                    }
-                    if (opcodeInfo == null) {
-                        Chat.PrintWarning($"无法找到对应服务器的Opcode列表");
-                    } else {
-                        var client = opcodeInfo.Lists.ClientZoneIpcType;
-                        var server = opcodeInfo.Lists.ServerZoneIpcType;
-                        var inventoryModifyHandler = client.FirstOrDefault(i => i.Name == "InventoryModifyHandler")?.Opcode;
-                        if (inventoryModifyHandler != null) { Config.OpcodeOfInventoryModifyHandler = (ushort)inventoryModifyHandler; }
-
-                        var itemInfo = server.FirstOrDefault(i => i.Name == "ItemInfo")?.Opcode;
-                        if (itemInfo != null) { Config.OpcodeOfItemInfo = (ushort)itemInfo; }
-
-                        var currencyCrystalInfo = server.FirstOrDefault(i => i.Name == "CurrencyCrystalInfo")?.Opcode;
-                        if (currencyCrystalInfo != null) { Config.OpcodeOfCurrencyCrystalInfo = (ushort)currencyCrystalInfo; }
-
-                        var updateInventorySlot = server.FirstOrDefault(i => i.Name == "UpdateInventorySlot")?.Opcode;
-                        if (updateInventorySlot != null) { Config.OpcodeOfUpdateInventorySlot = (ushort)updateInventorySlot; }
-
-                        if (inventoryModifyHandler == null || itemInfo == null || currencyCrystalInfo == null || updateInventorySlot == null) {
-                            Chat.PrintWarning($"部分Opcode自动更新失败，请手动更新Opcode\ninventoryModifyHandler:{inventoryModifyHandler}\nitemInfo:{itemInfo}\ncurrencyCrystalInfo:{currencyCrystalInfo}\nupdateInventorySlot:{updateInventorySlot}");
-                        } else {
-                            Config.Save();
-                            Chat.PrintLog($"已将部分Opcode更新至{opcodeInfo.Region}服务器<{opcodeInfo.Version}版本>");
-                        }
-                    }
-                }
-            } catch (HttpRequestException e) {
-                Chat.PrintWarning("无法从GitHub获取Opcode，请检查是否可以访问到GitHub");
-                Svc.PluginLog.Error(e.ToString());
-            }
-            downloadingOpcode = false;
-        }
-
-        #endregion
     }
 }
