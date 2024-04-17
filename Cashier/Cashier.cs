@@ -60,7 +60,6 @@ namespace Cashier
             PluginInterface.UiBuilder.Draw -= DrawUI;
             PluginInterface.UiBuilder.OpenConfigUi -= DrawConfigUI;
             Svc.CommandManager.RemoveHandler(commandName);
-            //Svc.AddonLifecycle.UnregisterListener([PluginUi.Trade.TradeShow, PluginUi.Trade.TradeHide]);
             PluginUi.Dispose();
         }
 
@@ -71,7 +70,10 @@ namespace Cashier
                 PluginUi.Main.Show();
             } else if (arg == "cfg" || arg == "config") {
                 PluginUi.Setting.Show();
-            } else if (arg == "t") {
+            }
+
+#if DEBUG
+            else if (arg == "t") {
                 var id = TargetSystem.Instance()->Target;
                 Commons.Chat.PrintLog($"ID:{id->ObjectID:X}||{(nint)id:X}");
             } else if (arg == "tt") {
@@ -85,9 +87,7 @@ namespace Cashier
                 AddonTradeHelper.Cancel();
             } else if (arg.StartsWith("trade name")) {
                 AddonTradeHelper.RequestTrade(arg[10..].Trim());
-            }
-#if DEBUG
-            else if (arg == "test") {
+            } else if (arg == "test") {
                 Commons.Chat.PrintLog("服务器id:" + homeWorldId);
             }
 #endif
@@ -95,7 +95,7 @@ namespace Cashier
 
         private void DrawUI()
         {
-            PluginUi.Draw();
+            PluginUi?.Draw();
         }
 
         private void DrawConfigUI()
