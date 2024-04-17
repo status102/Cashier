@@ -6,7 +6,7 @@
         {
         }
 
-        public TradeTarget(uint id, string worldName, nint objectId, string name)
+        public TradeTarget(uint id, string worldName, uint objectId, string name)
         {
             WorldId = id;
             WorldName = worldName;
@@ -18,8 +18,16 @@
 
         public string? WorldName { get; init; }
 
-        public nint? ObjectId { get; init; }
+        public uint ObjectId { get; init; } = 0xE0000000;
 
         public string? PlayerName { get; init; }
+
+        public override bool Equals(object? obj)
+        {
+            if(obj is TradeTarget target) {
+                return target.ObjectId == ObjectId;
+            }
+            return false;
+        }
     }
 }

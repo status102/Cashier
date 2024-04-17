@@ -1,12 +1,10 @@
 ﻿using Cashier.Addons;
 using Cashier.Commons;
-using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Command;
 using Dalamud.Plugin;
 using ECommons;
 using ECommons.Automation;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
-using FFXIVClientStructs.FFXIV.Component.GUI;
 
 namespace Cashier
 {
@@ -14,7 +12,7 @@ namespace Cashier
     {
         public static TaskManager? TaskManager { get; private set; }
         public static string PluginName { get; } = "Cashier";
-        public string Name => "Cashier";
+        public static string Name { get; } = "Cashier";
         private const string commandName = "/ca";
         public static Cashier? Instance { get; private set; }
         public PluginUI PluginUi { get; init; }
@@ -34,7 +32,7 @@ namespace Cashier
 
             Svc.CommandManager.AddHandler(commandName, new CommandInfo(OnCommand)
             {
-                HelpMessage = "/ca 打开历史记录\n /ca config|cfg 打开设置窗口"
+                HelpMessage = "/ca 打开主窗口\n/ca config|cfg 打开设置窗口"
             });
 
             PluginInterface.UiBuilder.Draw += DrawUI;
@@ -43,7 +41,7 @@ namespace Cashier
             Svc.ClientState.Login += OnLogin;
             Svc.ClientState.Logout += OnLogout;
 
-            PluginUi = new PluginUI(this);
+            PluginUi = new(this);
             homeWorldId = Svc.ClientState.LocalPlayer?.HomeWorld.Id ?? homeWorldId;
 
             ECommonsMain.Init(pluginInterface, this);
@@ -78,17 +76,15 @@ namespace Cashier
                 Commons.Chat.PrintLog($"ID:{id->ObjectID:X}||{(nint)id:X}");
             } else if (arg == "tt") {
             } else if (arg.StartsWith("money")) {
-                if (!int.TryParse(arg[5..].Trim(), out int result)) {
+                if (!uint.TryParse(arg[5..].Trim(), out uint result)) {
                     Commons.Chat.PrintLog("money parse error" + arg);
                     return;
                 }
-                AddonTradeHelper.TradeGil(result);
+                AddonTradeHelper.SetGil(result);
             } else if (arg == "cancel") {
-                AddonTradeHelper.CancelTrade();
+                AddonTradeHelper.Cancel();
             } else if (arg.StartsWith("trade name")) {
                 AddonTradeHelper.RequestTrade(arg[10..].Trim());
-            } else if (arg.StartsWith("confirm")) {
-                AddonTradeHelper.ConfirmTradeFirst();
             }
 #if DEBUG
             else if (arg == "test") {

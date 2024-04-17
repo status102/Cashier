@@ -9,15 +9,93 @@ using FFXIVClientStructs.FFXIV.Component.GUI;
 using System;
 using System.Linq;
 using System.Numerics;
+using Addon = Cashier.Commons.Addon;
 using ObjectKind = Dalamud.Game.ClientState.Objects.Enums.ObjectKind;
 using TaskManager = ECommons.Automation.TaskManager;
 
-namespace Cashier.Addons
+namespace Cashier.Addons;
+
+public unsafe class AddonTradeHelper
 {
-    public unsafe class AddonTradeHelper
+    private static TaskManager TaskManager => Cashier.TaskManager!;
+
+    /// <summary>
+    /// 向某人申请交易
+    /// </summary>
+    /// <param name="playerName"></param>
+    public static void RequestTrade(string playerName)
     {
-        private static TaskManager TaskManager => Cashier.TaskManager!;
-        public static void TradeItem(uint itemId, int count)
+        var objAddress = Svc.ObjectTable
+            .FirstOrDefault(x => x.Name.TextValue == playerName
+                && x.ObjectKind == ObjectKind.Player
+                && IsDistanceEnough(x.Position)
+                && x.IsTargetable)?.Address ?? nint.Zero;
+        if (objAddress == nint.Zero) {
+            Svc.PluginLog.Warning("找不到目标" + playerName);
+            return;
+        }
+        TargetSystem.Instance()->Target = (GameObject*)objAddress;
+        TargetSystem.Instance()->OpenObjectInteraction((GameObject*)objAddress);
+
+        TaskManager.DelayNext(50);
+        TaskManager.Enqueue(() => Addon.TryClickContextMenuEntry("申请交易"));
+        return;
+    }
+
+    /// <summary>
+    /// 向某人申请交易
+    /// </summary>
+    /// <param name="playerName"></param>
+    public static void RequestTrade(uint objectId)
+    {
+        var objAddress = Svc.ObjectTable.SearchById((ulong)objectId)?.Address ?? nint.Zero;
+        if (objAddress == nint.Zero) {
+            Svc.PluginLog.Warning($"找不到目标,id:{objectId:X}");
+            return;
+        }
+        TargetSystem.Instance()->Target = (GameObject*)objAddress;
+        TargetSystem.Instance()->OpenObjectInteraction((GameObject*)objAddress);
+
+        TaskManager.DelayNext(50);
+        TaskManager.Enqueue(() => Addon.TryClickContextMenuEntry("申请交易"));
+        return;
+    }
+
+    /// <summary>
+    /// 设置交易的金额，能突破100w上限，一眼挂
+    /// </summary>
+    /// <param name="money"></param>
+    public static void SetGil(uint money)
+    {
+        TaskManager.EnqueueImmediate(Step.ClickMoney);
+        TaskManager.DelayNext(50);
+        TaskManager.EnqueueImmediate(() => Step.SetCount(money));
+    }
+
+
+    /// <summary>
+    /// 主动取消交易
+    /// </summary>
+    public static void Cancel()
+    {
+        if (!GenericHelpers.TryGetAddonByName<AtkUnitBase>("Trade", out var addon)) {
+            Svc.PluginLog.Error("Trade为空");
+        } else {
+            Callback.Fire(addon, true, 1, 0);
+        }
+    }
+
+    public static bool IsDistanceEnough(Vector3 pos2)
+    {
+        var pos = Svc.ClientState.LocalPlayer!.Position;
+        return Math.Pow(pos.X - pos2.X, 2) + Math.Pow(pos.Z - pos2.Z, 2) < 16;
+    }
+
+    public static class Step
+    {
+        private static readonly InventoryType[] InventoryTypes = [InventoryType.Inventory1, InventoryType.Inventory2, InventoryType.Inventory3, InventoryType.Inventory4];
+
+        public static void TradeItem(uint itemId, uint count)
         {
             var agent = AgentInventoryContext.Instance();
             if (agent == null) {
@@ -29,12 +107,6 @@ namespace Cashier.Addons
                 Svc.PluginLog.Error("获取InventoryManager失败");
                 return;
             }
-            InventoryType[] InventoryTypes = [
-                InventoryType.Inventory1,
-                InventoryType.Inventory2,
-                InventoryType.Inventory3,
-                InventoryType.Inventory4
-            ];
             var foundType = InventoryTypes.Where(i => inventoryManager->GetItemCountInContainer(itemId, i) != 0).ToList();
             if (foundType.Count == 0) {
                 Svc.PluginLog.Error("背包里没找到");
@@ -74,27 +146,18 @@ namespace Cashier.Addons
         }
 
         /// <summary>
-        /// 设置交易的金额，能突破100w上限，一眼挂
+        /// 点击交易窗己方金币栏
         /// </summary>
-        /// <param name="money"></param>
-        public static void TradeGil(int money)
+        public static void ClickMoney()
         {
-            TaskManager.Enqueue(() =>
-            {
-                var contextMenu = (AtkUnitBase*)Svc.GameGui.GetAddonByName("Trade");
-
-                if (contextMenu is null) {
-                    Svc.PluginLog.Error("Trade为空");
-                    return;
-                }
-
-                Callback.Fire(contextMenu, true, 2, 0);
-            });
-            TaskManager.DelayNext(50);
-            TaskManager.Enqueue(() => SetCount(money));
+            if (!GenericHelpers.TryGetAddonByName<AtkUnitBase>("Trade", out var tradeAddon)) {
+                Svc.PluginLog.Error("Trade为空");
+            } else {
+                Callback.Fire(tradeAddon, true, 2, 0);
+            }
         }
 
-        private static void SetCount(int count)
+        public static void SetCount(uint count)
         {
             if (!GenericHelpers.TryGetAddonByName<AtkUnitBase>("InputNumeric", out var inputNumeric)) {
                 Svc.PluginLog.Error("Input为空");
@@ -104,70 +167,37 @@ namespace Cashier.Addons
         }
 
         /// <summary>
-        /// 向某人申请交易
+        /// 清除某一栏的道具
         /// </summary>
-        /// <param name="name"></param>
-        public static void RequestTrade(string name)
+        /// <param name="slotIndex"></param>
+        public static void ClearSlot(int slotIndex)
         {
-            var myPostion = Svc.ClientState.LocalPlayer!.Position;
-            var distance = (Vector3 pos) =>
-            {
-                return Math.Pow(pos.X - myPostion.X, 2) + Math.Pow(pos.Z - myPostion.Z, 2) < 16;
-            };
-            var objAddress = Svc.ObjectTable
-                .FirstOrDefault(x => x.Name.TextValue == name
-                && x.ObjectKind == ObjectKind.Player
-                && distance(x.Position)
-                && x.IsTargetable)?.Address ?? nint.Zero;
-            if (objAddress == nint.Zero) {
-                Svc.ChatGui.Print("找不到目标" + name);
-                return;
+            if (!GenericHelpers.TryGetAddonByName<AtkUnitBase>("Trade", out var addon)) {
+                Svc.PluginLog.Error("Trade为空");
+            } else {
+                Callback.Fire(addon, true, 3, slotIndex);
             }
-            TargetSystem.Instance()->Target = (GameObject*)objAddress;
-            TargetSystem.Instance()->OpenObjectInteraction((GameObject*)objAddress);
-
-            TaskManager.DelayNext(50);
-            TaskManager.Enqueue(() => Addon.TryClickContextMenuEntry("申请交易"));
-            return;
         }
 
         /// <summary>
-        /// 主动取消交易
+        /// 第一次确认
         /// </summary>
-        public static void CancelTrade()
+        public static void PreCheck()
         {
-            TaskManager.Enqueue(() =>
-            {
-                if (!GenericHelpers.TryGetAddonByName<AtkUnitBase>("Trade", out var addon)) {
-                    Svc.PluginLog.Error("Trade为空");
-                } else {
-                    Callback.Fire(addon, true, 1, 0);
-                }
-            });
+            if (!GenericHelpers.TryGetAddonByName<AtkUnitBase>("Trade", out var addon)) {
+                Svc.PluginLog.Error("Trade为空");
+            } else {
+                Callback.Fire(addon, true, 0, 0);
+            }
         }
 
-        public static void ClearTradeSlot(int slotIndex)
+        public static void FinalCheck(bool confirm = true)
         {
-            TaskManager.Enqueue(() =>
-            {
-                if (!GenericHelpers.TryGetAddonByName<AtkUnitBase>("Trade", out var addon)) {
-                    Svc.PluginLog.Error("Trade为空");
-                } else {
-                    Callback.Fire(addon, true, 3, slotIndex);
-                }
-            });
-        }
-
-        public static void ConfirmTradeFirst()
-        {
-            TaskManager.Enqueue(() =>
-            {
-                if (!GenericHelpers.TryGetAddonByName<AtkUnitBase>("Trade", out var tradeAddon)) {
-                    Svc.PluginLog.Error("Trade为空");
-                } else {
-                    Callback.Fire(tradeAddon, true, 0, 0);
-                }
-            });
+            if (!GenericHelpers.TryGetAddonByName<AtkUnitBase>("SelectYesno", out var addon)) {
+                Svc.PluginLog.Error("SelectYesno为空");
+            } else {
+                Callback.Fire(addon, true, confirm ? 0 : 1);
+            }
         }
     }
 }

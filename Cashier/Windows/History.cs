@@ -28,7 +28,7 @@ namespace Cashier.Windows
         private HashSet<string> historyTargetSet = [];
         private List<TradeHistory> showList = [];
 
-        private readonly Cashier tradeRecorder;
+        private readonly Cashier _cashier;
         private bool visible = false;
         private string? target = null;
 
@@ -52,7 +52,7 @@ namespace Cashier.Windows
 
                 ImGui.SameLine();
                 if (ImGui.Button("导出到csv")) {
-                    fileDialog = new FileDialog("save", "导出到csv", ".csv", tradeRecorder.PluginInterface.ConfigDirectory.FullName, "output.csv", "", 1, false, ImGuiFileDialogFlags.None);
+                    fileDialog = new FileDialog("save", "导出到csv", ".csv", _cashier.PluginInterface.ConfigDirectory.FullName, "output.csv", "", 1, false, ImGuiFileDialogFlags.None);
                     fileDialog.Show();
                 }
                 ImGui.SameLine();
@@ -221,7 +221,7 @@ namespace Cashier.Windows
 
             historyList = [];
             historyTargetSet = [];
-            string path = Path.Join(tradeRecorder.PluginInterface.ConfigDirectory.FullName, $"{playerWorld}_{playerName}.txt");
+            string path = Path.Join(_cashier.PluginInterface.ConfigDirectory.FullName, $"{playerWorld}_{playerName}.txt");
 
             using (StreamReader reader = new(File.Open(path, FileMode.OpenOrCreate))) {
                 string tradeStr;
@@ -246,7 +246,7 @@ namespace Cashier.Windows
             var playerName = Svc.ClientState.LocalPlayer!.Name.TextValue;
             var playerWorld = Svc.ClientState.LocalPlayer!.HomeWorld.GameData!.Name.RawString;
 
-            using FileStream stream = File.Open(Path.Join(tradeRecorder.PluginInterface.ConfigDirectory.FullName, $"{playerWorld}_{playerName}.txt"), FileMode.Create);
+            using FileStream stream = File.Open(Path.Join(_cashier.PluginInterface.ConfigDirectory.FullName, $"{playerWorld}_{playerName}.txt"), FileMode.Create);
             StreamWriter writer = new(stream);
             foreach (TradeHistory tradeHistory in historyList) {
                 if (tradeHistory.visible) { writer.WriteLine(tradeHistory.ToString()); }
@@ -261,7 +261,7 @@ namespace Cashier.Windows
         private void ExportHistory(string path)
         {
             if (Svc.ClientState.LocalPlayer == null) { return; }
-            Svc.PluginLog.Information($"[{tradeRecorder.Name}]保存交易历史: {path}");
+            Svc.PluginLog.Information($"[{Cashier.Name}]保存交易历史: {path}");
 
             var saveList = showList.Where(i => i.visible).Select(i => new string[7] {
                     i.Time,
@@ -313,7 +313,7 @@ namespace Cashier.Windows
         #region init
         public History(Cashier tradeRecorder)
         {
-            this.tradeRecorder = tradeRecorder;
+            this._cashier = tradeRecorder;
             Task.Run(() => ReadHistory());
         }
         public void Dispose()

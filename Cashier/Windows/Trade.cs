@@ -47,11 +47,7 @@ namespace Cashier.Windows
         /// <summary>
         /// 是否交易中
         /// </summary>
-        private bool _isTrading = false;
-        /// <summary>
-        /// 交易成功
-        /// </summary>
-        private bool _success = false;
+        public bool IsTrading { get; private set; } = false;
         /// <summary>
         /// 交易物品记录，0自己，1对面
         /// </summary>
@@ -81,20 +77,14 @@ namespace Cashier.Windows
         }
         private uint[] multiGil = [0, 0];
         private uint worldId = 0;
-        // todo 重做交易对象
         /// <summary>
         /// 交易目标
         /// </summary>
-        private TradeTarget target = new();
+        public TradeTarget Target { get; private set; } = new();
         /// <summary>
         /// 上次交易目标，用于判断是否连续交易
         /// </summary>
-        private TradeTarget lastTarget = new();
-        /// <summary>
-        /// 对方交易栏的发包序号，序号步进后需要清空道具栏
-        /// </summary>
-        private ushort targetRound = 0;
-        private readonly object targetRoundLock = new();
+        private TradeTarget LastTarget = new();
         private readonly nint agentTradePtr;
         private AtkUnitBase* addonTrade;
 
@@ -121,7 +111,7 @@ namespace Cashier.Windows
 
         public unsafe void Draw()
         {
-            if (!Config.ShowTradeWindow || !_isTrading || !_onceVisible) {
+            if (!Config.ShowTradeWindow || !IsTrading || !_onceVisible) {
                 return;
             }
             if (_position[0] == int.MinValue) {
@@ -166,7 +156,7 @@ namespace Cashier.Windows
                 // 显示当前交易对象的记录
                 ImGui.SameLine();
                 if (ImGuiComponents.IconButton(FontAwesomeIcon.History)) {
-                    _cashier.PluginUi.History.Show(target.PlayerName + "@" + target.WorldName);
+                    _cashier.PluginUi.History.Show(Target.PlayerName + "@" + Target.WorldName);
                 }
                 if (ImGui.IsItemHovered()) {
                     ImGui.SetTooltip("显示当前交易对象的交易记录");
@@ -181,7 +171,7 @@ namespace Cashier.Windows
                 DrawTradeTable(_tradeItemList[0], _tradeGil[0]);
                 ImGui.Spacing();
 
-                ImGui.TextUnformatted($"{target.PlayerName} @ {target.WorldName} -->");
+                ImGui.TextUnformatted($"{Target.PlayerName} @ {Target.WorldName} -->");
                 DrawTradeTable(_tradeItemList[1], _tradeGil[1]);
                 ImGui.End();
             }
@@ -339,9 +329,9 @@ namespace Cashier.Windows
                 _tradeItemList[1].Where(i => i.Id != 0).ToArray()
             ];
 
-            _cashier.PluginUi.History.AddHistory(status, $"{target.PlayerName}@{target.WorldName}", gil, list);
+            _cashier.PluginUi.History.AddHistory(status, $"{Target.PlayerName}@{Target.WorldName}", gil, list);
 
-            if (lastTarget != target) {
+            if (LastTarget != Target) {
                 multiGil = [0, 0];
                 multiItemList = [new(), new()];
             }
@@ -380,13 +370,13 @@ namespace Cashier.Windows
             }
 
             // todo 恢复结束输出
-            if (lastTarget == target) {
-                Svc.ChatGui.Print(BuildMultiTradeSeString(_payload, status, target, list, gil, multiItemList, multiGil).BuiltString);
+            if (LastTarget == Target) {
+                Svc.ChatGui.Print(BuildMultiTradeSeString(_payload, status, Target, list, gil, multiItemList, multiGil).BuiltString);
             } else {
-                Svc.ChatGui.Print(BuildTradeSeString(_payload, status, target, list, gil).BuiltString);
+                Svc.ChatGui.Print(BuildTradeSeString(_payload, status, Target, list, gil).BuiltString);
             }
             if (status) {
-                lastTarget = target;
+                LastTarget = Target;
             }
         }
 
@@ -397,9 +387,9 @@ namespace Cashier.Windows
         {
             _tradeItemList = [[new(), new(), new(), new(), new()], [new(), new(), new(), new(), new()]];
             _tradeGil = new uint[2];
+            _tradePlayerConfirm = new bool[2];
             _onceVisible = true;
             _position = [int.MinValue, int.MinValue];
-            _success = false;
             worldId = Svc.ClientState.LocalPlayer?.HomeWorld.Id ?? 0;
         }
 
@@ -574,16 +564,16 @@ namespace Cashier.Windows
             }
         }
 
-        public void TradeBegin()
+        public void OnTradeBegined()
         {
-            if (_isTrading) {
+            if (IsTrading) {
                 // 上次交易未结束
                 Svc.PluginLog.Warning("上次交易未结束时开始交易");
                 return;
             }
 
             Svc.PluginLog.Debug("交易开始");
-            _isTrading = true;
+            IsTrading = true;
             _refreshTimer.Start();
             Reset();
 
@@ -592,28 +582,39 @@ namespace Cashier.Windows
             }
         }
 
-        public void TradeCancelled()
+        public void OnTradeCancelled()
         {
-            if (!_isTrading) {
+            if (!IsTrading) {
                 // 未开始交易
                 Svc.PluginLog.Warning("未开始交易时交易被取消");
                 return;
             }
-            _isTrading = false;
+            IsTrading = false;
             _refreshTimer.Stop();
             Finish(false);
         }
 
-        public void TradeFinished()
+        public void OnTradeFinished()
         {
-            if (!_isTrading) {
+            if (!IsTrading) {
                 // 未开始交易
                 Svc.PluginLog.Warning("未开始交易时交易完成");
                 return;
             }
-            _isTrading = false;
+            IsTrading = false;
             _refreshTimer.Stop();
+            _cashier.PluginUi.Main.OnTradeFinished(Target.ObjectId, _tradeGil[0]);
             Finish(true);
+        }
+
+        public void OnTradeFinalChecked()
+        {
+            if (!IsTrading) {
+                // 未开始交易
+                Svc.PluginLog.Warning("未开始交易时进入最终确认");
+                return;
+            }
+            _cashier.PluginUi.Main.OnTradeFinalChecked(Target.ObjectId, _tradeGil[0]);
         }
 
 
@@ -627,18 +628,17 @@ namespace Cashier.Windows
             if (player != null) {
                 if (player.ObjectId != Svc.ClientState.LocalPlayer?.ObjectId) {
                     var world = Svc.DataManager.GetExcelSheet<World>()?.FirstOrDefault(r => r.RowId == player.HomeWorld.Id);
-                    target = new(player.HomeWorld.Id, world?.Name ?? "???", objectId, player.Name.TextValue);
+                    Target = new(player.HomeWorld.Id, world?.Name ?? "???", (uint)objectId, player.Name.TextValue);
                 }
             } else {
                 Svc.PluginLog.Error($"找不到交易对象，id: {objectId:X}");
-                target = new();
+                Target = new();
             }
         }
 
         public void RefreshData()
         {
             uint[] AddonIndex = [8, 9, 10, 11, 12, 19, 20, 21, 22, 23];
-            //8-12 19-23
             int getCount(uint nodeId)
             {
                 var imageNode = addonTrade->GetNodeById(nodeId)->GetAsAtkComponentNode()->Component->UldManager.NodeList[2]->GetAsAtkComponentNode();
@@ -679,7 +679,7 @@ namespace Cashier.Windows
         /// <param name="a1"></param>
         public void ClearTradeSlotItem(nint a1)
         {
-            if (!_isTrading) {
+            if (!IsTrading) {
                 return;
             }
             // 这个函数每帧每格子都被调用，看看有无优化
@@ -711,9 +711,13 @@ namespace Cashier.Windows
         /// 某方确认交易条件
         /// </summary>
         /// <param name="isPlayer1">是否为玩家1(自己)</param>
-        public void SetTradeConfirm(nint objectId)
+        public void SetTradeConfirm(nint objectId, bool confirmed)
         {
-
+            if (objectId == Svc.ClientState.LocalPlayer!.ObjectId) {
+                _tradePlayerConfirm[0] = confirmed;
+            } else {
+                _tradePlayerConfirm[1] = confirmed;
+            }
         }
     }
 }
