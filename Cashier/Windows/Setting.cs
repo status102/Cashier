@@ -10,7 +10,6 @@ using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using System.Numerics;
 
 namespace Cashier.Windows
@@ -59,7 +58,7 @@ namespace Cashier.Windows
                     }
                     ImGui.Unindent();
                 }
-
+#if DEBUG
                 if (ImGui.CollapsingHeader("预期价格")) {
 
                     #region 按钮块
@@ -163,6 +162,7 @@ namespace Cashier.Windows
                         DrawItemBlock(i, _presetList[i]);
                     }
                 }
+#endif
                 ImGui.End();
             }
         }
@@ -344,7 +344,7 @@ namespace Cashier.Windows
             }
             return resultList;
         }
-        public void Dispose()        {        }
+        public void Dispose() { }
 
     }
 }
