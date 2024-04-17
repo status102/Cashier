@@ -369,7 +369,6 @@ namespace Cashier.Windows
                 }
             }
 
-            // todo 恢复结束输出
             if (LastTarget == Target) {
                 Svc.ChatGui.Print(BuildMultiTradeSeString(_payload, status, Target, list, gil, multiItemList, multiGil).BuiltString);
             } else {
@@ -443,7 +442,7 @@ namespace Cashier.Windows
             // 支付
             if (gil[1] != 0 || items[1].Length != 0) {
                 builder.Add(new NewLinePayload());
-                builder.AddText("==>>  " + FontAwesomeIcon.ArrowRightLong.ToIconString());
+                builder.AddText("==>>  ");
                 if (gil[1] != 0) {
                     builder.AddText($"{gil[1]:#,0}{(char)SeIconChar.Gil}");
                 }
@@ -668,9 +667,6 @@ namespace Cashier.Windows
                 return;
             }
             _tradeItemList[index < 5 ? 0 : 1][index % 5] = new((uint)itemId % 1000000, 1, itemId > 1000001);
-#if DEBUG
-            Svc.PluginLog.Debug($"一个交易物品槽被设置: {a1:X}, {itemId}, index:{index}, isHQ:{itemId > 1000001}");
-#endif
         }
 
         /// <summary>
@@ -692,9 +688,6 @@ namespace Cashier.Windows
                 return;
             }
             _tradeItemList[index < 5 ? 0 : 1][index % 5] = new();
-#if DEBUG
-            Svc.PluginLog.Debug($"一个交易物品槽被清空: {a1:X}, index:{index}");
-#endif
         }
 
         /// <summary>
