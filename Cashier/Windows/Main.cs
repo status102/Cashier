@@ -27,6 +27,7 @@ public unsafe sealed class Main : IWindow
     private Dictionary<uint, int> _tradePlan = [];
     private Timer _selectPlayerTimer = new(2000) { AutoReset = true };
     private bool _isRunning = false;
+    private double _allMoney;
     private int _change;
     public Main(Cashier cashier)
     {
@@ -44,7 +45,7 @@ public unsafe sealed class Main : IWindow
     {
         _visible = !_visible;
         if (_visible) {
-            _teamHelper.UpdateTeamList();
+            UpdateTeamList();
         }
     }
 
@@ -60,7 +61,7 @@ public unsafe sealed class Main : IWindow
 
 
             if (ImGui.Button("更新小队列表")) {
-                _teamHelper.UpdateTeamList();
+                UpdateTeamList();
             }
             ImGui.SameLine();
             if (!_isRunning && ImGui.Button("开始")) {
@@ -75,12 +76,19 @@ public unsafe sealed class Main : IWindow
             }
 
             _change = 0;
+            ImGui.Text("全体: ");
+            ImGui.SameLine();
+            ImGui.SetNextItemWidth(80);
+            ImGui.InputDouble($"w##AllMoney", ref _allMoney, 0, 0, "%.1f", ImGuiInputTextFlags.CharsDecimal);
+            if (ImGui.IsItemDeactivatedAfterEdit()) {
+                _editPlan.Keys.ToList().ForEach(key => _editPlan[key] = (int)(_allMoney * 10000));
+            }
             AllMoneyButton.ToList().ForEach(num =>
             {
                 ImGui.SameLine();
                 ImGui.SetNextItemWidth(15);
                 string name = num < 0 ? num.ToString() : ("+" + num);
-                if (ImGui.Button($"{name}##全体都有{name}")) {
+                if (ImGui.Button($"{name}##All{name}")) {
                     _change = num * 10000;
                 }
             });
@@ -95,7 +103,7 @@ public unsafe sealed class Main : IWindow
                 });
             }
             ImGui.SameLine();
-            if (ImGui.Button($"归0##全体都有0")) {
+            if (ImGui.Button($"归0##All0")) {
                 _editPlan.Clear();
             }
 
@@ -119,41 +127,59 @@ public unsafe sealed class Main : IWindow
     private void DrawPersonalSetting(TeamHelper.TeamMember p)
     {
         ImGui.PushID(p.ObjectId.ToString());
-
-        ImGui.Text(p.FirstName + "@" + p.World);
-        ImGui.SameLine();
-        ImGui.SetNextItemWidth(80);
-        double value = _editPlan.TryGetValue(p.ObjectId, out int valueToken) ? valueToken / 10000.0 : 0;
-        ImGui.InputDouble($"w##{p.ObjectId}Money", ref value, 0, 0, "%.1f", ImGuiInputTextFlags.CharsDecimal);
-        if (ImGui.IsItemDeactivatedAfterEdit()) {
-            _editPlan[p.ObjectId] = (int)(value * 10000);
+        var hasPlan = _editPlan.ContainsKey(p.ObjectId);
+        if (!ImGui.Checkbox(p.FirstName + "@" + p.World, ref hasPlan)) {
+        } else if (hasPlan) {
+            _editPlan.Add(p.ObjectId, (int)(_allMoney * 10000));
+        } else {
+            _editPlan.Remove(p.ObjectId);
         }
-        _change = 0;
-        MoneyButton.ToList().ForEach(num =>
-        {
-            ImGui.SameLine();
-            ImGui.SetNextItemWidth(15);
-            string name = num < 0 ? num.ToString() : ("+" + num);
-            if (ImGui.Button($"{name}##{p.ObjectId}{name}")) {
-                _change = num * 10000;
+        if (hasPlan) {
+            ImGui.SameLine(200);
+            ImGui.SetNextItemWidth(80);
+            double value = _editPlan.TryGetValue(p.ObjectId, out int valueToken) ? valueToken / 10000.0 : 0;
+            ImGui.InputDouble($"w##{p.ObjectId}Money", ref value, 0, 0, "%.1f", ImGuiInputTextFlags.CharsDecimal);
+            if (ImGui.IsItemDeactivatedAfterEdit()) {
+                _editPlan[p.ObjectId] = (int)(value * 10000);
             }
-        });
-        if (_change != 0) {
-            _editPlan[p.ObjectId] = (int)(value * 10000) + _change;
-        }
+            _change = 0;
+            MoneyButton.ToList().ForEach(num =>
+            {
+                ImGui.SameLine();
+                ImGui.SetNextItemWidth(15);
+                string name = num < 0 ? num.ToString() : ("+" + num);
+                if (ImGui.Button($"{name}w##{p.ObjectId}{name}")) {
+                    _change = num * 10000;
+                }
+            });
+            if (_change != 0) {
+                _editPlan[p.ObjectId] = (int)(value * 10000) + _change;
+            }
 
-        ImGui.SameLine();
-        if (ImGui.Button($"归0##{p.ObjectId}0")) {
-            _editPlan[p.ObjectId] = 0;
-        }
-
-        if (_isRunning) {
-            // 运行中
             ImGui.SameLine();
-            _change = _tradePlan.TryGetValue(p.ObjectId, out var valueToken2) ? valueToken2 : 0;
-            ImGui.Text($"剩余: {_change:#,0}");
+            if (ImGui.Button($"归0##{p.ObjectId}0")) {
+                _editPlan[p.ObjectId] = 0;
+            }
+
+            if (_isRunning) {
+                // 运行中
+                ImGui.SameLine();
+                _change = _tradePlan.TryGetValue(p.ObjectId, out var valueToken2) ? valueToken2 : 0;
+                ImGui.Text($"剩余: {_change:#,0}");
+            }
         }
         ImGui.PopID();
+    }
+
+    private void UpdateTeamList()
+    {
+        _teamHelper.UpdateTeamList();
+        _teamHelper.TeamList.ForEach(p =>
+        {
+            if (!_editPlan.ContainsKey(p.ObjectId)) {
+                _editPlan.Add(p.ObjectId, 0);
+            }
+        });
     }
 
     private void Start()
