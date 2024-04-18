@@ -9,7 +9,7 @@ namespace Cashier.Commons;
 public sealed class HookHelper : IDisposable
 {
     private readonly Cashier _cashier;
-    private Trade Trade => _cashier.PluginUi.Trade;
+    private Trade? Trade => _cashier.PluginUi?.Trade;
     private bool _isDisposed;
 
     public HookHelper(Cashier cashier)
@@ -52,8 +52,8 @@ public sealed class HookHelper : IDisposable
     private delegate nint ResetSlot(nint a);
     private nint DetourResetSlot(nint a)
     {
-        //Svc.PluginLog.Information($"一个格子被清空: {a:X}");
-        Trade.ClearTradeSlotItem(a);
+        //一个格子被清空
+        Trade?.ClearTradeSlotItem(a);
         return _resetSlotHook!.Original(a);
     }
 
@@ -64,7 +64,7 @@ public sealed class HookHelper : IDisposable
     {
         // 未能读取到物品数量，暂时搁置
         //Svc.PluginLog.Debug($"一个格子设置: {a:X}, itemId:{itemId}, a3:{a3}, a4:{a4}, a5:{a5}");
-        Trade.SetTradeSlotItem(a, (int)itemId);
+        Trade?.SetTradeSlotItem(a, (int)itemId);
         return _setSlotItemIdHook!.Original(a, itemId, a3, a4, a5);
     }
 
@@ -92,39 +92,41 @@ public sealed class HookHelper : IDisposable
             case 1:
                 // 别人交易你
                 Trade.SetTradeTarget(Marshal.ReadInt32(a3 + 40));
-                Trade.OnTradeBegined();
+                Trade?.OnTradeBegined();
                 break;
             case 2:
                 // 发起交易
-                Trade.OnTradeBegined();
+                Trade?.OnTradeBegined();
                 break;
             case 16:
-                // case 16: 交易状态更新
+                // 交易状态更新
                 var a3_5 = Marshal.ReadByte(a3 + 5);
+#if DEBUG
                 Svc.PluginLog.Debug($"交易状态0x10: {a1:X}, {a2:X}, {a3:X}, {a3_5}");
+#endif
                 switch (a3_5) {
                     case 3:
-                        Trade.SetTradeConfirm(Marshal.ReadInt32(a3 + 40), false);
+                        Trade?.SetTradeConfirm(Marshal.ReadInt32(a3 + 40), false);
                         break;
                     case 4:
                     case 5:
                         // 先确认条件的一边会产生一个a=4，两边都确认后发两个a=5
                         // 最终确认先确认的产生一个a=6，两边都确认后发两个a=1
-                        Trade.SetTradeConfirm(Marshal.ReadInt32(a3 + 40), true);
+                        Trade?.SetTradeConfirm(Marshal.ReadInt32(a3 + 40), true);
                         break;
                 }
                 break;
             case 5:
                 // 最终确认
-                Trade.OnTradeFinalChecked();
+                Trade?.OnTradeFinalChecked();
                 break;
             case 7:
                 // 取消交易
-                Trade.OnTradeCancelled();
+                Trade?.OnTradeCancelled();
                 break;
             case 17:
                 // 交易成功
-                Trade.OnTradeFinished();
+                Trade?.OnTradeFinished();
                 break;
             default:
 #if DEBUG
@@ -145,7 +147,7 @@ public sealed class HookHelper : IDisposable
     private delegate nint TradeOtherMoney(nint a1, nint a2);
     private nint DetourTradeOtherMoney(nint a1, nint a2)
     {
-        Trade.SetTradeMoney((uint)Marshal.ReadInt32(a2 + 8), false);
+        Trade?.SetTradeMoney((uint)Marshal.ReadInt32(a2 + 8), false);
         return _tradeOtherMoney!.Original(a1, a2);
     }
 
@@ -154,7 +156,7 @@ public sealed class HookHelper : IDisposable
     private delegate nint TradeMyMoney(nint a1, uint a2);
     private nint DetourTradeMyMoney(nint a1, uint a2)
     {
-        Trade.SetTradeMoney(a2, true);
+        Trade?.SetTradeMoney(a2, true);
         return _tradeMyMoney!.Original(a1, a2);
     }
     #endregion
