@@ -30,6 +30,9 @@ namespace Cashier
             Config = PluginInterface.GetPluginConfig() as Configuration ?? new();
             Config.Initialize(PluginInterface);
 
+            HookHelper = new(this);
+            PluginUi = new(this);
+
             Svc.CommandManager.AddHandler(commandName, new CommandInfo(OnCommand)
             {
                 HelpMessage = "/ca 打开主窗口\n/ca config|cfg 打开设置窗口"
@@ -40,13 +43,10 @@ namespace Cashier
 
             Svc.ClientState.Login += OnLogin;
             Svc.ClientState.Logout += OnLogout;
-
-            PluginUi = new(this);
             homeWorldId = Svc.ClientState.LocalPlayer?.HomeWorld.Id ?? homeWorldId;
 
             ECommonsMain.Init(pluginInterface, this);
             TaskManager = new();
-            HookHelper = new(this);
         }
 
         public void Dispose()

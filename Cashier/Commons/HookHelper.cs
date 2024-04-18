@@ -12,6 +12,22 @@ public sealed class HookHelper : IDisposable
     private Trade? Trade => _cashier.PluginUi?.Trade;
     private bool _isDisposed;
 
+    public delegate void SetTradeTarget(nint objectId);
+    public SetTradeTarget? OnSetTradeTarget;
+    public delegate void TradeEvent();
+    public TradeEvent? OnTradeBegined;
+    public TradeEvent? OnTradeFinished;
+    public TradeEvent? OnTradeCanceled;
+    public TradeEvent? OnTradeFinalCheck;
+    public delegate void TradeConfirmChanged(nint objectId, bool confirm);
+    public TradeConfirmChanged? OnTradeConfirmChanged;
+    public delegate void TradeMoneyChanged(uint money, bool isPlayer1);
+    public TradeMoneyChanged? OnTradeMoneyChanged;
+    public delegate void TradeItemSlotSet(nint a1, int itemId);
+    public TradeItemSlotSet? OnSetTradeItemSlot;
+    public delegate void TradeItemSlotClear(nint a1);
+    public TradeItemSlotClear? OnClearTradeItemSlot;
+
     public HookHelper(Cashier cashier)
     {
         _cashier = cashier;
@@ -53,7 +69,7 @@ public sealed class HookHelper : IDisposable
     private nint DetourResetSlot(nint a)
     {
         //一个格子被清空
-        Trade?.ClearTradeSlotItem(a);
+        OnClearTradeItemSlot?.Invoke(a);
         return _resetSlotHook!.Original(a);
     }
 
@@ -64,7 +80,7 @@ public sealed class HookHelper : IDisposable
     {
         // 未能读取到物品数量，暂时搁置
         //Svc.PluginLog.Debug($"一个格子设置: {a:X}, itemId:{itemId}, a3:{a3}, a4:{a4}, a5:{a5}");
-        Trade?.SetTradeSlotItem(a, (int)itemId);
+        OnSetTradeItemSlot?.Invoke(a, (int)itemId);
         return _setSlotItemIdHook!.Original(a, itemId, a3, a4, a5);
     }
 
@@ -73,9 +89,12 @@ public sealed class HookHelper : IDisposable
     [Signature("48 89 6C 24 18 57 41 56 41 57 48 83 EC 50 48 8B E9 44 8B FA", DetourName = nameof(DetourTradeRequest))]
     private Hook<TradeRequest>? _tradeRequestHook;
     private delegate nint TradeRequest(nint a1, nint a2);
-    private nint DetourTradeRequest(nint a1, nint objectId)
+    public nint DetourTradeRequest(nint a1, nint objectId)
     {
-        Trade.SetTradeTarget(objectId);
+        // 对无法发起交易的对象、超距，2
+        // 正常0
+        // 现在无法进行交易，19
+        OnSetTradeTarget?.Invoke(objectId);
         return _tradeRequestHook!.Original(a1, objectId);
     }
 
@@ -91,12 +110,12 @@ public sealed class HookHelper : IDisposable
         switch (Marshal.ReadByte(a3 + 4)) {
             case 1:
                 // 别人交易你
-                Trade.SetTradeTarget(Marshal.ReadInt32(a3 + 40));
-                Trade?.OnTradeBegined();
+                OnSetTradeTarget?.Invoke(Marshal.ReadInt32(a3 + 40));
+                OnTradeBegined?.Invoke();
                 break;
             case 2:
                 // 发起交易
-                Trade?.OnTradeBegined();
+                OnTradeBegined?.Invoke();
                 break;
             case 16:
                 // 交易状态更新
@@ -106,27 +125,27 @@ public sealed class HookHelper : IDisposable
 #endif
                 switch (a3_5) {
                     case 3:
-                        Trade?.SetTradeConfirm(Marshal.ReadInt32(a3 + 40), false);
+                        OnTradeConfirmChanged?.Invoke(Marshal.ReadInt32(a3 + 40), false);
                         break;
                     case 4:
                     case 5:
                         // 先确认条件的一边会产生一个a=4，两边都确认后发两个a=5
                         // 最终确认先确认的产生一个a=6，两边都确认后发两个a=1
-                        Trade?.SetTradeConfirm(Marshal.ReadInt32(a3 + 40), true);
+                        OnTradeConfirmChanged?.Invoke(Marshal.ReadInt32(a3 + 40), true);
                         break;
                 }
                 break;
             case 5:
                 // 最终确认
-                Trade?.OnTradeFinalChecked();
+                OnTradeFinalCheck?.Invoke();
                 break;
             case 7:
                 // 取消交易
-                Trade?.OnTradeCancelled();
+                OnTradeCanceled?.Invoke();
                 break;
             case 17:
                 // 交易成功
-                Trade?.OnTradeFinished();
+                OnTradeFinished?.Invoke();
                 break;
             default:
 #if DEBUG
@@ -147,16 +166,18 @@ public sealed class HookHelper : IDisposable
     private delegate nint TradeOtherMoney(nint a1, nint a2);
     private nint DetourTradeOtherMoney(nint a1, nint a2)
     {
-        Trade?.SetTradeMoney((uint)Marshal.ReadInt32(a2 + 8), false);
+        OnTradeMoneyChanged?.Invoke((uint)Marshal.ReadInt32(a2 + 8), false);
         return _tradeOtherMoney!.Original(a1, a2);
     }
 
     [Signature("48 89 5C 24 08 57 48 83 EC 20 8B DA 48 8B F9 E8 ?? ?? ?? ?? 3B D8 76 ?? B8 08 00 00 00 48 8B 5C 24 30 48 83 C4 20 5F", DetourName = nameof(DetourTradeMyMoney))]
     private Hook<TradeMyMoney>? _tradeMyMoney;
     private delegate nint TradeMyMoney(nint a1, uint a2);
-    private nint DetourTradeMyMoney(nint a1, uint a2)
+    public nint DetourTradeMyMoney(nint a1, uint a2)
     {
-        Trade?.SetTradeMoney(a2, true);
+        // 正常0
+        // 超出自身上限8
+        OnTradeMoneyChanged?.Invoke(a2, true);
         return _tradeMyMoney!.Original(a1, a2);
     }
     #endregion
