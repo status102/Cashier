@@ -48,16 +48,19 @@ public unsafe class AddonTradeHelper
     /// <param name="playerName"></param>
     public static void RequestTrade(uint objectId)
     {
-        var objAddress = Svc.ObjectTable.SearchById((ulong)objectId)?.Address ?? nint.Zero;
-        if (objAddress == nint.Zero) {
-            Svc.PluginLog.Warning($"找不到目标,id:{objectId:X}");
+        var gameObject = Svc.ObjectTable.SearchById(objectId);
+        if (gameObject == null) {
+            Svc.PluginLog.Info($"找不到目标,id:{objectId:X}");
+            return;
+        } else if (!IsDistanceEnough(gameObject.Position)) {
+            Svc.PluginLog.Info($"距离过远,id:{objectId:X}");
             return;
         }
-        TargetSystem.Instance()->Target = (GameObject*)objAddress;
-        TargetSystem.Instance()->OpenObjectInteraction((GameObject*)objAddress);
+        TargetSystem.Instance()->Target = (GameObject*)gameObject.Address;
+        TargetSystem.Instance()->OpenObjectInteraction((GameObject*)gameObject.Address);
 
-        TaskManager.DelayNext(50);
-        TaskManager.Enqueue(() => Addon.TryClickContextMenuEntry("申请交易"));
+        TaskManager.DelayNextImmediate(50);
+        TaskManager.EnqueueImmediate(() => Addon.TryClickContextMenuEntry("申请交易"));
         return;
     }
 
@@ -68,7 +71,7 @@ public unsafe class AddonTradeHelper
     public static void SetGil(uint money)
     {
         TaskManager.EnqueueImmediate(Step.ClickMoney);
-        TaskManager.DelayNext(50);
+        TaskManager.DelayNextImmediate(50);
         TaskManager.EnqueueImmediate(() => Step.SetCount(money));
     }
 
