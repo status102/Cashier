@@ -29,5 +29,26 @@
             }
             return false;
         }
+
+        public override int GetHashCode()
+        {
+            return ObjectId.GetHashCode();
+        }
+
+        public static bool operator ==(TradeTarget? left, TradeTarget? right)
+        {
+            if (left is null) {
+                return right is null;
+            }
+            return left.Equals(right);
+        }
+
+        public static bool operator !=(TradeTarget? left, TradeTarget? right)
+        {
+            if (left is null) {
+                return right is not null;
+            }
+            return !left.Equals(right);
+        }
     }
 }
