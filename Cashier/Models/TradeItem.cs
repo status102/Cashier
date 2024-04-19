@@ -7,18 +7,17 @@ namespace Cashier.Model
     public class TradeItem
     {
         public uint Id { get; private init; } = 0;
-        public uint Count { get; set; } = 0;
+        public int Count { get; set; } = 0;
         public bool Quality { get; init; } = false;
         public ushort IconId { get; init; } = 0;
         public string Name { get; init; } = string.Empty;
         public uint StackSize { get; init; } = 1;
 
-        public int MinPrice = 0;
         public float PresetPrice = 0;
         public Preset? ItemPreset { get; init; }
 
         public TradeItem() { }
-        public TradeItem(uint id, uint count = 1, bool quality = false)
+        public TradeItem(uint id, int count = 1, bool quality = false)
         {
             Id = id;
             Count = count;

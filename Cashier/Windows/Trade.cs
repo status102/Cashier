@@ -63,8 +63,8 @@ public unsafe class Trade
     {
         public uint Id { get; private init; }
         public string Name { get; private init; }
-        public uint NqCount { get; set; } = 0;
-        public uint HqCount { get; set; } = 0;
+        public int NqCount { get; set; } = 0;
+        public int HqCount { get; set; } = 0;
         public uint StackSize { get; private init; }
         public RecordItem(uint id, string? name, uint stackSize)
         {
@@ -269,12 +269,6 @@ public unsafe class Trade
             ImGui.TextUnformatted($"{gil:#,0}");
 
             float sum = 0;
-            uint min = gil;
-            foreach (var item in items) {
-                if (item.MinPrice > 0) {
-                    min += (uint)item.MinPrice * item.Count;
-                }
-            }
 
             ImGui.TableNextColumn();
             ImGui.TableNextColumn();
@@ -289,16 +283,6 @@ public unsafe class Trade
             }
             if (ImGui.IsItemClicked()) {
                 ImGui.SetClipboardText($"{sum:#,0}");
-            }
-
-            ImGui.TableNextColumn();
-
-            ImGui.TextUnformatted($"{min:#,0}");
-            if (ImGui.IsItemHovered()) {
-                ImGui.SetTooltip($"以最低价计算的金额，单击复制：{min:#,0}");
-            }
-            if (ImGui.IsItemClicked()) {
-                ImGui.SetClipboardText($"{min:#,0}");
             }
 
             ImGui.EndTable();
@@ -646,7 +630,7 @@ public unsafe class Trade
         }
         for (int i = 0; i < 10; i++) {
             if (IsTrading && _tradeItemList[i < 5 ? 0 : 1][i % 5] is TradeItem { Id: > 0 } item) {
-                item.Count = (uint)getCount(AddonIndex[i]);
+                item.Count = getCount(AddonIndex[i]);
             }
         }
     }
