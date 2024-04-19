@@ -1,17 +1,16 @@
 {
   "Author": "status102",
   "Name": "Cashier",
-  "Punchline": "根据预期价格计算预期交易金额，并记录交易历史",
-  "Description": "根据预期价格计算预期交易金额，并记录交易历史",
+  "Punchline": "老板队结账太麻烦？忘了交易给了多少金币？用这个",
+  "Description": "",
   "ApplicableVersion": "any",
-  "RepoUrl": "https://github.com/status102/TradeRecorder",
+  "RepoUrl": "https://github.com/status102/Cashier",
   "Tags": [
     "Trade",
     "MarketBoard",
     "RetainerSell"
   ],
   "ImageUrls": [
-    "https://github.com/status102/TradeRecorder/raw/master/Image/History.png",
-    "https://github.com/status102/TradeRecorder/raw/master/Image/Setting.png"
+    "https://github.com/status102/Cashier/raw/master/Image/History.png"
   ]
 }
