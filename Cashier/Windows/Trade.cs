@@ -548,12 +548,12 @@ public unsafe class Trade
 
         Svc.PluginLog.Debug("交易开始");
         IsTrading = true;
-        _refreshTimer.Start();
         Reset();
-
-        if (addonTrade == default && GenericHelpers.TryGetAddonByName<AtkUnitBase>("Trade", out var addonPtr)) {
+        if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("Trade", out var addonPtr)) {
             addonTrade = addonPtr;
         }
+
+        _refreshTimer.Start();
     }
 
     private void OnTradeCancelled()
