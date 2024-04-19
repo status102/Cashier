@@ -1,6 +1,5 @@
 ﻿using Cashier.Commons;
 using Cashier.Model;
-using Cashier.Universalis;
 using Dalamud.Game.Text;
 using Dalamud.Interface;
 using Dalamud.Interface.Internal;
@@ -30,7 +29,6 @@ namespace Cashier.Windows
 
         private Preset? editItem = null;
         private List<Preset> _presetList => Config.PresetList;
-        private uint worldId => _cashier.homeWorldId;
 
         private static IDalamudTextureWrap? FailureImage => PluginUI.GetIcon(784);
         public Setting(Cashier cashier)
@@ -101,15 +99,6 @@ namespace Cashier.Windows
                     }
                     if (ImGui.IsItemHovered()) {
                         ImGui.SetTooltip("删除所有项目");
-                    }
-
-                    //手动刷新价格
-                    ImGui.SameLine();
-                    if (Utils.DrawIconButton(FontAwesomeIcon.Sync, -1)) {
-                        _presetList.ForEach(item => item.ItemPrice.Update(worldId));
-                    }
-                    if (ImGui.IsItemHovered()) {
-                        ImGui.SetTooltip("重新获取所有价格(数据来自Universalis)");
                     }
 
                     //导出到剪贴板
@@ -278,7 +267,7 @@ namespace Cashier.Windows
 
                 ImGui.TextUnformatted(item.Name + (item.Quality ? SeIconChar.HighQuality.ToIconString() : string.Empty));
 
-                if (item.ItemPrice.Marketable) {
+                if (item.Marketable) {
                     ImGui.TextUnformatted(item.GetPresetString());
                 } else {
                     // 如果不能在市场出售
@@ -288,22 +277,6 @@ namespace Cashier.Windows
                 ImGui.EndChild();
             }
             if (ImGui.IsItemHovered()) {
-
-                ImGui.BeginTooltip();
-                ImGui.TextUnformatted($"名称: {item.Name}");
-                ImGui.TextUnformatted($"预设: {item.GetPresetString()}");
-                if (item.ItemPrice.GetMinPrice(worldId).Item4 == 0) {
-                    // 获取失败
-                    ImGui.TextUnformatted($"{item.ItemPrice.GetMinPrice(worldId).Item3}");
-                } else {
-                    ImGui.TextUnformatted("---大区最低价格---");
-                    ImGui.TextUnformatted($"NQ: {item.ItemPrice.GetMinPrice(worldId).Item1:#,0}");
-                    ImGui.TextUnformatted($"HQ: {item.ItemPrice.GetMinPrice(worldId).Item2:#,0}");
-                    ImGui.TextUnformatted($"服务器: {item.ItemPrice.GetMinPrice(worldId).Item3:#,0}");
-                    ImGui.TextUnformatted($"价格上传时间: {DateTimeOffset.FromUnixTimeMilliseconds(item.ItemPrice.GetMinPrice(worldId).Item4).LocalDateTime.ToString(Price.format)}");
-                }
-                ImGui.EndTooltip();
-
                 if (ImGui.IsItemClicked(ImGuiMouseButton.Right)) {
                     ImGui.OpenPopup($"MoreEdit-{index}");
                 }
@@ -316,12 +289,6 @@ namespace Cashier.Windows
                     ImGui.CloseCurrentPopup();
                 }
 
-                // 重新获取当前物品的最低价格
-                ImGui.SameLine();
-                if (Utils.DrawIconButton(FontAwesomeIcon.Sync)) {
-                    item.ItemPrice.Update(worldId);
-                    ImGui.CloseCurrentPopup();
-                }
                 // 删除当前物品
                 ImGui.SameLine();
                 if (Utils.DrawIconButton(FontAwesomeIcon.Trash)) {

@@ -1,7 +1,6 @@
 ﻿using Cashier.Commons;
 using Cashier.Model;
 using Cashier.Models;
-using Cashier.Universalis;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
@@ -30,14 +29,14 @@ public unsafe class Trade
     /// <summary>
     /// 窗口大小
     /// </summary>
-    private const int Width = 540, Height = 560;
+    private const int Width = 460, Height = 560;
     /// <summary>
     /// 显示价格的颜色，RBGA
     /// 绿色为设定HQ但交易NQ；黄色为设定NQ但交易HQ
     /// </summary>
     private readonly static Vector4[] Color = [new(1, 1, 1, 1), new(0, 1, 0, 1), new(1, 1, 0, 1)];
-    private readonly static string[] ColumnName = ["", "物品", "数量", "预期", "最低价"];
-    private readonly static float[] ColumnWidth = [26, -1, 42, 80, 80];
+    private readonly static string[] ColumnName = ["", "物品", "数量", "预期"];
+    private readonly static float[] ColumnWidth = [26, -1, 42, 80];
     private const int RowWidth = 30;
     private readonly static Vector2 ImageSize = new(26, 26);
     private readonly Lazy<IDalamudTextureWrap?> GilImage = new(PluginUI.GetIcon(65002));
@@ -257,35 +256,7 @@ public unsafe class Trade
                         ImGui.SetClipboardText($"{items[i].PresetPrice:#,0}");
                     }
                 }
-                // 显示大区最低价格
-                ImGui.TableNextColumn();
-
-                if (!items[i].Quality) {
-                    // NQ能够接受HQ价格
-                    var nq = items[i].ItemPrice.GetMinPrice(worldId).Item1;
-                    var hq = items[i].ItemPrice.GetMinPrice(worldId).Item2;
-                    if (nq == 0) {
-                        items[i].MinPrice = hq;
-                    } else if (hq == 0) {
-                        items[i].MinPrice = nq;
-                    } else {
-                        items[i].MinPrice = Math.Min(nq, hq);
-                    }
-                } else {
-                    items[i].MinPrice = items[i].ItemPrice.GetMinPrice(worldId).Item2;
                 }
-                if (items[i].MinPrice > 0) {
-                    ImGui.TextUnformatted(items[i].MinPrice.ToString("#,0"));
-                    if (ImGui.IsItemHovered()) {
-                        ImGui.SetTooltip($"NQ: {items[i].ItemPrice.GetMinPrice(worldId).Item1:#,0}\nHQ: {items[i].ItemPrice.GetMinPrice(worldId).Item2:#,0}\nWorld: {items[i].ItemPrice.GetMinPrice(worldId).Item3}\nTime: " + DateTimeOffset.FromUnixTimeMilliseconds(items[i].ItemPrice?.GetMinPrice(worldId).Item4 ?? 0).LocalDateTime.ToString(Price.format));
-                    }
-                } else {
-                    ImGui.TextDisabled("---");
-                    if (ImGui.IsItemHovered() && items[i].ItemPrice.GetMinPrice(worldId).Item3.Length > 0) {
-                        ImGui.SetTooltip(items[i].ItemPrice.GetMinPrice(worldId).Item3);
-                    }
-                }
-            }
 
             ImGui.TableNextRow(ImGuiTableRowFlags.None, RowWidth);
             ImGui.TableNextColumn();

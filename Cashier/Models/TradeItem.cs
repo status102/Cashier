@@ -1,5 +1,4 @@
 ﻿using Cashier.Commons;
-using Cashier.Universalis;
 using Lumina.Excel.GeneratedSheets;
 using System.Linq;
 
@@ -13,7 +12,6 @@ namespace Cashier.Model
         public ushort IconId { get; init; } = 0;
         public string Name { get; init; } = string.Empty;
         public uint StackSize { get; init; } = 1;
-        public Price.ItemPrice? ItemPrice { get; init; }
 
         public int MinPrice = 0;
         public float PresetPrice = 0;
@@ -35,7 +33,6 @@ namespace Cashier.Model
                 StackSize = item.StackSize;
                 ItemPreset = Cashier.Instance?.Config.PresetList.FirstOrDefault(i => i.Name == Name && i.Quality == Quality);
             }
-            ItemPrice = Price.GetItem(id);
         }
     }
 }
