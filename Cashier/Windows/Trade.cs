@@ -1,6 +1,7 @@
 ﻿using Cashier.Commons;
 using Cashier.Model;
 using Cashier.Models;
+using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.Text;
 using Dalamud.Game.Text.SeStringHandling;
@@ -74,7 +75,6 @@ public unsafe class Trade
         }
     }
     private uint[] multiGil = [0, 0];
-    private uint worldId = 0;
     /// <summary>
     /// 交易目标
     /// </summary>
@@ -95,6 +95,10 @@ public unsafe class Trade
         _payload = cashier.PluginInterface.AddChatLinkHandler(0, OnTradeTargetClick);
 
         agentTradePtr = (nint)AgentModule.Instance()->GetAgentByInternalId(AgentId.Trade);
+        Svc.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "Trade", (_, args) =>
+        {
+            addonTrade = (AtkUnitBase*)args.Addon;
+        });
         _refreshTimer.Elapsed += (_, __) => RefreshData();
 
         _cashier.HookHelper.OnSetTradeTarget += SetTradeTarget;
@@ -364,7 +368,6 @@ public unsafe class Trade
         _tradePlayerConfirm = new bool[2];
         _onceVisible = true;
         _position = [int.MinValue, int.MinValue];
-        worldId = Svc.ClientState.LocalPlayer?.HomeWorld.Id ?? 0;
     }
 
     #region 构建输出
@@ -549,10 +552,6 @@ public unsafe class Trade
         Svc.PluginLog.Debug("交易开始");
         IsTrading = true;
         Reset();
-        if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("Trade", out var addonPtr)) {
-            addonTrade = addonPtr;
-        }
-
         _refreshTimer.Start();
     }
 
@@ -615,7 +614,7 @@ public unsafe class Trade
         uint[] AddonIndex = [8, 9, 10, 11, 12, 19, 20, 21, 22, 23];
         int getCount(uint nodeId)
         {
-            if (!IsTrading) {
+            if (!IsTrading || addonTrade == default) {
                 return -1;
             }
             try {
