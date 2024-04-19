@@ -434,7 +434,7 @@ public unsafe class Trade
             .AddUiForegroundOff();
         if (target.WorldId != Svc.ClientState.LocalPlayer?.HomeWorld.Id) {
             builder.Add(new IconPayload(BitmapFontIcon.CrossWorld))
-                .AddText(target.PlayerName!);
+                .AddText(target.WorldName!);
         }
         builder.Add(RawPayload.LinkTerminator);
         if (!status) {
