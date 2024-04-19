@@ -53,11 +53,20 @@ namespace Cashier.Windows
             if (ImGui.Begin($"设置##{Cashier.Name}Config", ref _visible)) {
                 if (ImGui.CollapsingHeader("基础设置", ImGuiTreeNodeFlags.DefaultOpen)) {
                     ImGui.Indent();
+
                     if (ImGui.Checkbox("显示交易窗口", ref Config.ShowTradeWindow)) {
+                        Config.Save();
+                    }
+
+                    if (ImGui.InputInt("步进1", ref Config.TradeStepping_1, 0, 0, ImGuiInputTextFlags.CharsDecimal)) {
+                        Config.Save();
+                    }
+                    if (ImGui.InputInt("步进2", ref Config.TradeStepping_2, 0, 0, ImGuiInputTextFlags.CharsDecimal)) {
                         Config.Save();
                     }
                     ImGui.Unindent();
                 }
+
 #if DEBUG
                 if (ImGui.CollapsingHeader("预期价格")) {
 

@@ -17,7 +17,8 @@ namespace Cashier
 		/// </summary>
 		public bool ShowTradeWindow = true;
 
-		public List<Preset> PresetList = new();
+        public int TradeStepping_1 = 10;
+        public int TradeStepping_2 = 50;
 
 		#region Init and Save
 		[NonSerialized]

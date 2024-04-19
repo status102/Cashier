@@ -387,7 +387,6 @@ public unsafe class Trade
                 multiItemList[1][item.Id] = rec;
             }
         }
-
         if (LastTarget == Target) {
             Svc.ChatGui.Print(BuildMultiTradeSeString(_payload, status, Target, list, gil, multiItemList, multiGil).BuiltString);
         } else {

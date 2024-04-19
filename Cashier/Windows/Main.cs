@@ -21,7 +21,7 @@ public unsafe sealed class Main : IWindow
     private const uint MaximumGilPerTimes = 10000;// 1_000_000;
     private readonly static Vector2 WindowSize = new(720, 640);
     private static TaskManager TaskManager => Cashier.TaskManager!;
-    private readonly int[] MoneyButton = [-50, -10, 10, 50];
+    private int[] MoneyButton = [-50, -10, 10, 50];
 
 
     private bool _visible;
@@ -190,6 +190,7 @@ public unsafe sealed class Main : IWindow
             _editPlan.TryAdd(p.ObjectId, 0);
         });
         _nameLength = (int)ImGui.CalcTextSize("全体: ").X + 60;
+        MoneyButton = [-Config.TradeStepping_2, -Config.TradeStepping_1, Config.TradeStepping_1, Config.TradeStepping_2];
     }
 
     private void Start()
