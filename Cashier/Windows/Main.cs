@@ -18,7 +18,8 @@ public unsafe sealed class Main : IWindow
 {
     private readonly Cashier _cashier;
     private Trade Trade => _cashier.PluginUi.Trade;
-    private const uint MaximumGilPerTimes = 10000;// 1_000_000;
+    private Configuration Config => _cashier.Config;
+    private const uint MaximumGilPerTimes = 1_000_000;
     private readonly static Vector2 WindowSize = new(720, 640);
     private static TaskManager TaskManager => Cashier.TaskManager!;
     private int[] MoneyButton = [-50, -10, 10, 50];
@@ -29,7 +30,7 @@ public unsafe sealed class Main : IWindow
     private Dictionary<uint, int> _editPlan = [];
     private Dictionary<uint, int> _tradePlan = [];
     private Dictionary<uint, int> _tradePriority = [];
-    private readonly Timer _selectPlayerTimer = new(2000) { AutoReset = true };
+    private readonly Timer _selectPlayerTimer = new(1_000) { AutoReset = true };
     private bool _isRunning = false;
     private double _allMoney;
     private int _change;
@@ -199,6 +200,7 @@ public unsafe sealed class Main : IWindow
         _tradePlan = new(_editPlan.Where(i => i.Value > 0));
         //_tradePriority = new(_editPlan.Keys.Select(i => KeyValuePair.Create(i, 0)));
         _selectPlayerTimer.Start();
+        AutoRequestTradeTick(null, null);
     }
 
     private void Stop()
@@ -214,7 +216,7 @@ public unsafe sealed class Main : IWindow
     /// </summary>
     /// <param name="sender"></param>
     /// <param name="e"></param>
-    private void AutoRequestTradeTick(object? sender, ElapsedEventArgs e)
+    private void AutoRequestTradeTick(object? sender, ElapsedEventArgs? e)
     {
         if (!_visible || _tradePlan.Count == 0) {
             Stop();
@@ -230,10 +232,14 @@ public unsafe sealed class Main : IWindow
             .ToList()
             .ForEach(id =>
             {
+                TaskManager.DelayNext(50);
                 TaskManager.Enqueue(() => RequestTrade(id));
             });
     }
 
+    /// <summary>
+    /// 显示交易窗口后设置金额
+    /// </summary>
     private void OnTrade(AddonEvent type, AddonArgs args)
     {
         if (!_visible || !_isRunning) {
@@ -242,9 +248,9 @@ public unsafe sealed class Main : IWindow
         TaskManager.Abort();
         _lastTradeObjectId = Trade.Target.ObjectId;
         if (_tradePlan.TryGetValue(_lastTradeObjectId, out var value)) {
-            TaskManager.DelayNext(50);
+            TaskManager.DelayNext(200);
             TaskManager.Enqueue(() => SetGil(value >= MaximumGilPerTimes ? MaximumGilPerTimes : (uint)value));
-            TaskManager.DelayNext(50);
+            TaskManager.DelayNext(200);
             TaskManager.Enqueue(AddonTradeHelper.Step.PreCheck);
         } else {
             AddonTradeHelper.Cancel();
