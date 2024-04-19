@@ -8,30 +8,40 @@ using System.Linq;
 
 namespace Cashier
 {
-	[Serializable]
-	public class Configuration : IPluginConfiguration
-	{
-		public int Version { get; set; } = 0;
+    [Serializable]
+    public class Configuration : IPluginConfiguration, INotifyPropertyChanged
+    {
+        public int Version { get; set; } = 0;
 
-		/// <summary>
-		/// 是否显示交易监控窗口
-		/// </summary>
-		public bool ShowTradeWindow = true;
+        /// <summary>
+        /// 是否显示交易监控窗口
+        /// </summary>
+        public bool ShowTradeWindow = true;
 
+        /// <summary>
+        /// 结账的步进值
+        /// </summary>
         public int TradeStepping_1 = 10;
         public int TradeStepping_2 = 50;
 
-		#region Init and Save
-		[NonSerialized]
-		private DalamudPluginInterface? pluginInterface;
+        /// <summary>
+        /// 交易结束时是否在聊天框通知
+        /// </summary>
+        public bool TradeNotify = true;
+
+        public List<Preset> PresetList = [];
+
+        #region Init and Save
+        [NonSerialized]
+        private DalamudPluginInterface? pluginInterface;
 
         public event PropertyChangedEventHandler? PropertyChanged;
 
         public void Initialize(DalamudPluginInterface pluginInterface)
         {
-			this.pluginInterface = pluginInterface;
+            this.pluginInterface = pluginInterface;
             PropertyChanged += Configuration_PropertyChanged;
-		}
+        }
 
         private void Configuration_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
@@ -40,9 +50,9 @@ namespace Cashier
 
         public void Save()
         {
-			PresetList = PresetList.Where(i => i.Id != 0).ToList();
-			this.pluginInterface!.SavePluginConfig(this);
-		}
-		#endregion
-	}
+            PresetList = PresetList.Where(i => i.Id != 0).ToList();
+            this.pluginInterface!.SavePluginConfig(this);
+        }
+        #endregion
+    }
 }

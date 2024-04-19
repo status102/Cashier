@@ -53,7 +53,8 @@ namespace Cashier.Windows
                     ImGui.Indent();
 
                     ImGui.Checkbox("显示交易窗口", ref Config.ShowTradeWindow);
-                    
+                    ImGui.Checkbox("交易结束后在聊天框发送提示", ref Config.TradeNotify);
+
                     ImGui.SetNextItemWidth(150);
                     ImGui.InputInt("步进1", ref Config.TradeStepping_1, 0, 0, ImGuiInputTextFlags.CharsDecimal);
 
