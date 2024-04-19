@@ -25,10 +25,21 @@ namespace Cashier
 		[NonSerialized]
 		private DalamudPluginInterface? pluginInterface;
 
-		public void Initialize(DalamudPluginInterface pluginInterface) {
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        public void Initialize(DalamudPluginInterface pluginInterface)
+        {
 			this.pluginInterface = pluginInterface;
+            PropertyChanged += Configuration_PropertyChanged;
 		}
-		public void Save() {
+
+        private void Configuration_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            Save();
+        }
+
+        public void Save()
+        {
 			PresetList = PresetList.Where(i => i.Id != 0).ToList();
 			this.pluginInterface!.SavePluginConfig(this);
 		}

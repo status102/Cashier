@@ -125,9 +125,9 @@ namespace Cashier.Windows
             if (!tradeItem.Status) {
                 title += "  (取消)";
             }
-            var expansion = ImGui.CollapsingHeader(title.ToString(), ref tradeItem.visible);
+            var expansion = ImGui.CollapsingHeader(title.ToString(), ref tradeItem.Visible);
             // 如果处于显示状态，则绘制本次交易的净金币进出
-            if (tradeItem.visible) {
+            if (tradeItem.Visible) {
                 ImGui.SameLine(ImGui.GetColumnWidth() - 130);
                 var get = (int)tradeItem.ReceiveGil - (int)tradeItem.GiveGil;
                 ImGui.TextUnformatted($"{(get > 0 ? "+" : "")}{get:#,#}");
@@ -182,7 +182,7 @@ namespace Cashier.Windows
                 }
             }
             // 有记录需要删除
-            if (!tradeItem.visible) {
+            if (!tradeItem.Visible) {
                 isHistoryChanged = true;
             }
         }
@@ -249,7 +249,7 @@ namespace Cashier.Windows
             using FileStream stream = File.Open(Path.Join(_cashier.PluginInterface.ConfigDirectory.FullName, $"{playerWorld}_{playerName}.txt"), FileMode.Create);
             StreamWriter writer = new(stream);
             foreach (TradeHistory tradeHistory in historyList) {
-                if (tradeHistory.visible) { writer.WriteLine(tradeHistory.ToString()); }
+                if (tradeHistory.Visible) { writer.WriteLine(tradeHistory.ToString()); }
             }
             writer.Flush();
         }
@@ -263,7 +263,7 @@ namespace Cashier.Windows
             if (Svc.ClientState.LocalPlayer == null) { return; }
             Svc.PluginLog.Information($"[{Cashier.Name}]保存交易历史: {path}");
 
-            var saveList = showList.Where(i => i.visible).Select(i => new string[7] {
+            var saveList = showList.Where(i => i.Visible).Select(i => new string[7] {
                     i.Time,
                     i.Status.ToString(),
                     i.Target,

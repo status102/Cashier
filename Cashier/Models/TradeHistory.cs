@@ -19,27 +19,28 @@ namespace Cashier.Model
 		/// <summary>
 		/// 是否显示该项目
 		/// </summary>
-		public bool visible = true;
+		public bool Visible = true;
 		public bool Status { get; init; } = true;
 		public string Target { get; init; } = "";
 		public uint GiveGil { get; init; } = 0;
 		public uint ReceiveGil { get; init; } = 0;
-		public HistoryItem[] giveItemArray { get; init; } = Array.Empty<HistoryItem>();
-		public HistoryItem[] receiveItemArray { get; init; } = Array.Empty<HistoryItem>();
+		public HistoryItem[] giveItemArray { get; init; } = [];
+		public HistoryItem[] receiveItemArray { get; init; } = [];
 
 		public static TradeHistory? ParseFromString(string str) {
 			string[] strArray = str.Split(PART_SPLIT);
-			if (strArray.Length != 7)
-				return null;
+			if (strArray.Length != 7) {
+                return null;
+            }
 
-			TradeHistory tradeHistory = new() {
+            TradeHistory tradeHistory = new() {
 				Time = strArray[0],
 				Status = bool.Parse(strArray[1]),
 				Target = strArray[2],
 				GiveGil = uint.Parse(strArray[3]),
 				ReceiveGil = uint.Parse(strArray[4]),
-				giveItemArray = strArray[5].Split(ITEM_SPLIT).Select(i => i.Split(COUNT_SPLIT)).Where(i => i.Length == 2).Select(i => new HistoryItem(i[0], uint.Parse(i[1]))).ToArray(),
-				receiveItemArray = strArray[6].Split(ITEM_SPLIT).Select(i => i.Split(COUNT_SPLIT)).Where(i => i.Length == 2).Select(i => new HistoryItem(i[0], uint.Parse(i[1]))).ToArray()
+				giveItemArray = strArray[5].Split(ITEM_SPLIT).Select(i => i.Split(COUNT_SPLIT)).Where(i => i.Length == 2).Select(i => new HistoryItem(i[0], int.Parse(i[1]))).ToArray(),
+				receiveItemArray = strArray[6].Split(ITEM_SPLIT).Select(i => i.Split(COUNT_SPLIT)).Where(i => i.Length == 2).Select(i => new HistoryItem(i[0], int.Parse(i[1]))).ToArray()
 			};
 			return tradeHistory;
 		}
@@ -56,11 +57,11 @@ namespace Cashier.Model
 		public class HistoryItem
 		{
 			public string Name { get; init; }
-			public uint Count { get; init; }
+			public int Count { get; init; }
 			private bool Quality = false;
 			public IDalamudTextureWrap? Icon { get; init; }
 
-			public HistoryItem(string name, uint count) {
+			public HistoryItem(string name, int count) {
 				Name = name;
 				Count = count;
 				Quality = name.EndsWith("HQ");
@@ -69,7 +70,7 @@ namespace Cashier.Model
 					Icon = PluginUI.GetIcon(itemByName.Icon, Quality);
 				}
 			}
-			public HistoryItem(ushort iconId, string name, uint count, bool quality) {
+			public HistoryItem(ushort iconId, string name, int count, bool quality) {
 				Name = name;
 				Count = count;
 				Quality = quality;

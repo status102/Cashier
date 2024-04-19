@@ -52,17 +52,14 @@ namespace Cashier.Windows
                 if (ImGui.CollapsingHeader("基础设置", ImGuiTreeNodeFlags.DefaultOpen)) {
                     ImGui.Indent();
 
-                    if (ImGui.Checkbox("显示交易窗口", ref Config.ShowTradeWindow)) {
-                        Config.Save();
-                    }
+                    ImGui.Checkbox("显示交易窗口", ref Config.ShowTradeWindow);
+                    
                     ImGui.SetNextItemWidth(150);
-                    if (ImGui.InputInt("步进1", ref Config.TradeStepping_1, 0, 0, ImGuiInputTextFlags.CharsDecimal)) {
-                        Config.Save();
-                    }
+                    ImGui.InputInt("步进1", ref Config.TradeStepping_1, 0, 0, ImGuiInputTextFlags.CharsDecimal);
+
                     ImGui.SetNextItemWidth(150);
-                    if (ImGui.InputInt("步进2", ref Config.TradeStepping_2, 0, 0, ImGuiInputTextFlags.CharsDecimal)) {
-                        Config.Save();
-                    }
+                    ImGui.InputInt("步进2", ref Config.TradeStepping_2, 0, 0, ImGuiInputTextFlags.CharsDecimal);
+
                     ImGui.Unindent();
                 }
 
