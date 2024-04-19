@@ -256,7 +256,7 @@ public unsafe class Trade
                         ImGui.SetClipboardText($"{items[i].PresetPrice:#,0}");
                     }
                 }
-                }
+            }
 
             ImGui.TableNextRow(ImGuiTableRowFlags.None, RowWidth);
             ImGui.TableNextColumn();
@@ -629,16 +629,23 @@ public unsafe class Trade
         uint[] AddonIndex = [8, 9, 10, 11, 12, 19, 20, 21, 22, 23];
         int getCount(uint nodeId)
         {
-            var imageNode = addonTrade->GetNodeById(nodeId)->GetAsAtkComponentNode()->Component->UldManager.NodeList[2]->GetAsAtkComponentNode();
-            if (!imageNode->AtkResNode.IsVisible) {
+            if (!IsTrading) {
                 return -1;
             }
-
-            var countTextNode = imageNode->Component->UldManager.NodeList[6]->GetAsAtkTextNode();
-            return int.TryParse(countTextNode->NodeText.ToString(), out int result) ? result : -1;
+            try {
+                var imageNode = addonTrade->GetNodeById(nodeId)->GetAsAtkComponentNode()->Component->UldManager.NodeList[2]->GetAsAtkComponentNode();
+                if (!imageNode->AtkResNode.IsVisible) {
+                    return -1;
+                }
+                var countTextNode = imageNode->Component->UldManager.NodeList[6]->GetAsAtkTextNode();
+                return int.TryParse(countTextNode->NodeText.ToString(), out int result) ? result : -1;
+            } catch (Exception e) {
+                Svc.PluginLog.Error("获取交易物品数量失败, nodeId:" + nodeId, e.Message);
+                return -1;
+            }
         }
         for (int i = 0; i < 10; i++) {
-            if (_tradeItemList[i < 5 ? 0 : 1][i % 5] is TradeItem { Id: > 0 } item) {
+            if (IsTrading && _tradeItemList[i < 5 ? 0 : 1][i % 5] is TradeItem { Id: > 0 } item) {
                 item.Count = (uint)getCount(AddonIndex[i]);
             }
         }
