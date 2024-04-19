@@ -1,10 +1,14 @@
 ﻿using Cashier.Addons;
 using Cashier.Commons;
+using Cashier.Models;
 using Dalamud.Game.Command;
 using Dalamud.Plugin;
 using ECommons;
 using ECommons.Automation;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
+using System;
+using System.Diagnostics;
+using Chat = Cashier.Commons.Chat;
 
 namespace Cashier
 {
@@ -19,7 +23,7 @@ namespace Cashier
         public Configuration Config { get; init; }
         public DalamudPluginInterface PluginInterface { get; init; }
         public uint homeWorldId = 0;
-        private HookHelper HookHelper { get; init; }
+        public HookHelper HookHelper { get; init; }
 
         public Cashier(DalamudPluginInterface pluginInterface)
         {
@@ -35,10 +39,11 @@ namespace Cashier
 
             Svc.CommandManager.AddHandler(commandName, new CommandInfo(OnCommand)
             {
-                HelpMessage = "/ca 打开主窗口\n/ca config|cfg 打开设置窗口"
+                HelpMessage = "/ca 打开主窗口\n/ca config|cfg 打开设置窗口\n/ca history 打开历史记录"
             });
 
             PluginInterface.UiBuilder.Draw += DrawUI;
+            PluginInterface.UiBuilder.OpenMainUi += UiBuilder_OpenMainUi;
             PluginInterface.UiBuilder.OpenConfigUi += DrawConfigUI;
 
             Svc.ClientState.Login += OnLogin;
@@ -58,6 +63,7 @@ namespace Cashier
             Svc.ClientState.Login -= OnLogin;
             Svc.ClientState.Logout -= OnLogout;
             PluginInterface.UiBuilder.Draw -= DrawUI;
+            PluginInterface.UiBuilder.OpenMainUi -= UiBuilder_OpenMainUi;
             PluginInterface.UiBuilder.OpenConfigUi -= DrawConfigUI;
             Svc.CommandManager.RemoveHandler(commandName);
             PluginUi.Dispose();
@@ -70,6 +76,8 @@ namespace Cashier
                 PluginUi.Main.Show();
             } else if (arg == "cfg" || arg == "config") {
                 PluginUi.Setting.Show();
+            } else if (arg == "history") {
+                PluginUi.History.Show();
             }
 
 #if DEBUG
@@ -98,6 +106,10 @@ namespace Cashier
             PluginUi?.Draw();
         }
 
+        private void UiBuilder_OpenMainUi()
+        {
+            PluginUi.Main.Show();
+        }
         private void DrawConfigUI()
         {
             PluginUi.Setting.Show();

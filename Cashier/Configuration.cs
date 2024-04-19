@@ -1,9 +1,10 @@
-﻿using Dalamud.Configuration;
+﻿using Cashier.Model;
+using Dalamud.Configuration;
 using Dalamud.Plugin;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.Linq;
-using Cashier.Model;
 
 namespace Cashier
 {
