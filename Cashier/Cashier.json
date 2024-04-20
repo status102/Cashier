@@ -1,16 +1,14 @@
 {
   "Author": "status102",
   "Name": "Cashier",
-  "Punchline": "老板队结账太麻烦？忘了交易给了多少金币？用这个",
-  "Description": "",
-  "ApplicableVersion": "any",
+  "Punchline": "自动结账，交易记录",
+  "Description": "买东西忘记给了多少钱？老板队结账太麻烦？用这个",
   "RepoUrl": "https://github.com/status102/Cashier",
   "Tags": [
-    "Trade",
-    "MarketBoard",
-    "RetainerSell"
+    "Trade"
   ],
   "ImageUrls": [
-    "https://github.com/status102/Cashier/raw/master/Image/History.png"
+    "https://raw.githubusercontent.com/status102/Cashier/master/Image/Main.png",
+    "https://raw.githubusercontent.com/status102/Cashier/master/Image/History.png"
   ]
 }
