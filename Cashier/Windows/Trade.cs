@@ -38,7 +38,7 @@ public unsafe class Trade
     private readonly static Vector4[] Color = [new(1, 1, 1, 1), new(0, 1, 0, 1), new(1, 1, 0, 1)];
     private readonly static string[] ColumnName = ["", "物品", "数量", "预期"];
     private readonly static float[] ColumnWidth = [26, -1, 42, 80];
-    private const int RowWidth = 30;
+    private const int RowHeight = 30;
     private readonly static Vector2 ImageSize = new(26, 26);
     private readonly Lazy<IDalamudTextureWrap?> GilImage = new(PluginUI.GetIcon(65002));
     private readonly Timer _refreshTimer = new(100) { AutoReset = true };
@@ -147,7 +147,9 @@ public unsafe class Trade
         ImGui.SetNextWindowSize(new Vector2(Width, Height), ImGuiCond.Appearing);
         ImGui.SetNextWindowPos(new Vector2(_position[0], _position[1]), ImGuiCond.Once);
         if (ImGui.Begin("玩家交易", ref _onceVisible, ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar)) {
-            ImGui.TextUnformatted("<--");
+            ImGui.TextUnformatted("<--    ");
+            ImGui.SameLine();
+            ImGui.TextUnformatted(_tradePlayerConfirm[0] ? "√" : string.Empty);
 
             ImGui.SameLine(ImGui.GetColumnWidth() - 90);
             ImGui.TextDisabled("(?)");
@@ -193,7 +195,9 @@ public unsafe class Trade
             DrawTradeTable(_tradeItemList[0], _tradeGil[0]);
             ImGui.Spacing();
 
-            ImGui.TextUnformatted($"{Target.PlayerName} @ {Target.WorldName} -->");
+            ImGui.TextUnformatted($"{Target.PlayerName} @ {Target.WorldName} -->    ");
+            ImGui.SameLine();
+            ImGui.TextUnformatted(_tradePlayerConfirm[1] ? "√" : string.Empty);
             DrawTradeTable(_tradeItemList[1], _tradeGil[1]);
             ImGui.End();
         }
@@ -219,7 +223,7 @@ public unsafe class Trade
             }
             ImGui.TableHeadersRow();
             for (int i = 0; i < items.Length; i++) {
-                ImGui.TableNextRow(ImGuiTableRowFlags.None, RowWidth);
+                ImGui.TableNextRow(ImGuiTableRowFlags.None, RowHeight);
                 ImGui.TableNextColumn();
 
                 if (items[i].Id == 0) {
@@ -235,12 +239,13 @@ public unsafe class Trade
 
                 var itemPreset = items[i].ItemPreset;
                 if (ImGui.IsItemHovered() && itemPreset != null) {
-                    ImGui.SetTooltip($"预设：{itemPreset.GetPresetString()}");
+                    ImGui.SetTooltip($"预设: {itemPreset.GetPresetString()}");
                 }
 
                 ImGui.TableNextColumn();
                 ImGui.TextUnformatted(Convert.ToString(items[i].Count));
 
+                // todo 调整预期价格的显示
                 ImGui.TableNextColumn();
                 if (itemPreset == null) {
                     ImGui.TextDisabled("---");
@@ -262,10 +267,10 @@ public unsafe class Trade
                 }
             }
 
-            ImGui.TableNextRow(ImGuiTableRowFlags.None, RowWidth);
+            ImGui.TableNextRow(ImGuiTableRowFlags.None, RowHeight);
             ImGui.TableNextColumn();
 
-            if (GilImage != null) {
+            if (GilImage.Value != null) {
                 ImGui.Image(GilImage.Value.ImGuiHandle, ImageSize);
             }
 
