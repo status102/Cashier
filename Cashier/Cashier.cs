@@ -1,13 +1,9 @@
-﻿using Cashier.Addons;
-using Cashier.Commons;
-using Cashier.Models;
+﻿using Cashier.Commons;
 using Dalamud.Game.Command;
 using Dalamud.Plugin;
 using ECommons;
 using ECommons.Automation;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
-using System;
-using System.Diagnostics;
 using Chat = Cashier.Commons.Chat;
 
 namespace Cashier;
@@ -76,45 +72,10 @@ public unsafe sealed class Cashier : IDalamudPlugin
         } else if (arg == "history") {
             PluginUi.History.Show();
         }
-
 #if DEBUG
         else if (arg == "t") {
             var id = TargetSystem.Instance()->Target;
             Chat.PrintLog($"ID:{id->ObjectID:X}||{(nint)id:X}");
-        } else if (arg == "me") {
-            TradeTarget a = new() { ObjectId = 1 };
-            TradeTarget b = new() { ObjectId = 1 };
-            Chat.PrintLog(a.Equals(b).ToString());
-            Chat.PrintLog($"{a == b}");
-        } else if (arg == "g2") {
-            try {
-                var a1 = Process.GetCurrentProcess().MainModule!.BaseAddress;
-                var id = TargetSystem.Instance()->FocusTarget;
-                var i = HookHelper.DetourTradeRequest(a1 + 0x21F16C0, (nint)id->ObjectID);
-                Chat.PrintLog("发起交易:return" + i);
-            } catch (Exception) {
-            }
-        } else if (arg.StartsWith("money")) {
-            if (!uint.TryParse(arg[5..].Trim(), out uint result)) {
-                Chat.PrintLog("money parse error" + arg);
-                return;
-            }
-            AddonTradeHelper.SetGil(result);
-        } else if (arg.StartsWith("gmoney")) {
-            if (!uint.TryParse(arg[6..].Trim(), out uint result)) {
-                Chat.PrintLog("money parse error" + arg);
-                return;
-            }
-            try {
-                var a1 = Process.GetCurrentProcess().MainModule!.BaseAddress;
-                var i = HookHelper.DetourTradeMyMoney(a1 + 0x21F16C0, result);
-                Chat.PrintLog("设置money:return" + i);
-            } catch (Exception) {
-            }
-        } else if (arg == "cancel") {
-            AddonTradeHelper.Cancel();
-        } else if (arg.StartsWith("trade name")) {
-            AddonTradeHelper.RequestTrade(arg[10..].Trim());
         }
 #endif
     }
