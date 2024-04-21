@@ -18,10 +18,10 @@ public unsafe sealed class Main : IWindow
 {
     private readonly Cashier _cashier;
     private Trade Trade => _cashier.PluginUi.Trade;
-    private Configuration Config => _cashier.Config;
-    private const uint MaximumGilPerTimes = 1_000_000;
-    private readonly static Vector2 WindowSize = new(720, 640);
     private static TaskManager TaskManager => Cashier.TaskManager!;
+    private Configuration Config => _cashier.Config;
+    private const uint Maximum_Gil_Per_Times = 1_000_000;
+    private readonly static Vector2 Window_Size = new(720, 640);
     private int[] MoneyButton = [-50, -10, 10, 50];
 
 
@@ -62,7 +62,7 @@ public unsafe sealed class Main : IWindow
         if (!_visible) {
             return;
         }
-        ImGui.SetNextWindowSize(WindowSize, ImGuiCond.Once);
+        ImGui.SetNextWindowSize(Window_Size, ImGuiCond.Once);
         if (ImGui.Begin($"主窗口##{Cashier.Name}Main", ref _visible)) {
             ImGui.Text("老板队自动结账：");
             ImGui.SameLine();
@@ -249,7 +249,7 @@ public unsafe sealed class Main : IWindow
         _lastTradeObjectId = Trade.Target.ObjectId;
         if (_tradePlan.TryGetValue(_lastTradeObjectId, out var value)) {
             TaskManager.DelayNext(200);
-            TaskManager.Enqueue(() => SetGil(value >= MaximumGilPerTimes ? MaximumGilPerTimes : (uint)value));
+            TaskManager.Enqueue(() => SetGil(value >= Maximum_Gil_Per_Times ? Maximum_Gil_Per_Times : (uint)value));
             TaskManager.DelayNext(200);
             TaskManager.Enqueue(AddonTradeHelper.Step.PreCheck);
         } else {

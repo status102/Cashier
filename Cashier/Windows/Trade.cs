@@ -25,8 +25,8 @@ namespace Cashier.Windows;
 public unsafe class Trade
 {
     private Cashier _cashier { get; init; }
-    private int[] _position = new int[2];
-    private bool _onceVisible = true;
+    private Configuration Config => _cashier.Config;
+    private DalamudLinkPayload _payload { get; init; }
     /// <summary>
     /// 窗口大小
     /// </summary>
@@ -36,12 +36,14 @@ public unsafe class Trade
     /// 绿色为设定HQ但交易NQ；黄色为设定NQ但交易HQ
     /// </summary>
     private readonly static Vector4[] Color = [new(1, 1, 1, 1), new(0, 1, 0, 1), new(1, 1, 0, 1)];
-    private readonly static string[] ColumnName = ["", "物品", "数量", "预期"];
-    private readonly static float[] ColumnWidth = [26, -1, 42, 80];
-    private const int RowHeight = 30;
-    private readonly static Vector2 ImageSize = new(26, 26);
+    private readonly static string[] Column_Name = ["", "物品", "数量", "预期"];
+    private readonly static float[] Column_Width = [26, -1, 42, 80];
+    private const int Row_Height = 30;
+    private readonly static Vector2 Image_Size = new(26, 26);
     private readonly Lazy<IDalamudTextureWrap?> GilImage = new(PluginUI.GetIcon(65002));
     private readonly Timer _refreshTimer = new(100) { AutoReset = true };
+    private int[] _position = new int[2];
+    private bool _onceVisible = true;
 
     /// <summary>
     /// 是否交易中
@@ -59,7 +61,7 @@ public unsafe class Trade
     /// <summary>
     /// 连续交易物品记录，Key itemId，Value (name, nq, hq, stackSize)
     /// </summary>
-    private Dictionary<uint, RecordItem>[] multiItemList = [new(), new()];
+    private Dictionary<uint, RecordItem>[] _multiItemList = [new(), new()];
     private class RecordItem
     {
         public uint Id { get; private init; }
@@ -87,8 +89,6 @@ public unsafe class Trade
     private AtkUnitBase* addonTrade;
 
     #region Init
-    private DalamudLinkPayload _payload { get; init; }
-    private Configuration Config => _cashier.Config;
     public Trade(Cashier cashier)
     {
         _cashier = cashier;
@@ -210,20 +210,20 @@ public unsafe class Trade
     /// <param name="gil"></param>
     private void DrawTradeTable(TradeItem[] items, uint gil)
     {
-        if (ImGui.BeginTable("交易栏", ColumnName.Length, ImGuiTableFlags.RowBg | ImGuiTableFlags.BordersInnerV)) {
+        if (ImGui.BeginTable("交易栏", Column_Name.Length, ImGuiTableFlags.RowBg | ImGuiTableFlags.BordersInnerV)) {
 
-            for (int i = 0; i < ColumnName.Length; i++) {
-                if (ColumnWidth.Length > i) {
-                    if (ColumnWidth[i] >= 0) {
-                        ImGui.TableSetupColumn(ColumnName[i], ImGuiTableColumnFlags.WidthFixed, ColumnWidth[i]);
+            for (int i = 0; i < Column_Name.Length; i++) {
+                if (Column_Width.Length > i) {
+                    if (Column_Width[i] >= 0) {
+                        ImGui.TableSetupColumn(Column_Name[i], ImGuiTableColumnFlags.WidthFixed, Column_Width[i]);
                     } else {
-                        ImGui.TableSetupColumn(ColumnName[i], ImGuiTableColumnFlags.WidthStretch);
+                        ImGui.TableSetupColumn(Column_Name[i], ImGuiTableColumnFlags.WidthStretch);
                     }
                 }
             }
             ImGui.TableHeadersRow();
             for (int i = 0; i < items.Length; i++) {
-                ImGui.TableNextRow(ImGuiTableRowFlags.None, RowHeight);
+                ImGui.TableNextRow(ImGuiTableRowFlags.None, Row_Height);
                 ImGui.TableNextColumn();
 
                 if (items[i].Id == 0) {
@@ -231,7 +231,7 @@ public unsafe class Trade
                 }
                 var icon = PluginUI.GetIcon(items[i].IconId, items[i].Quality);
                 if (icon != null) {
-                    ImGui.Image(icon.ImGuiHandle, ImageSize);
+                    ImGui.Image(icon.ImGuiHandle, Image_Size);
                 }
 
                 ImGui.TableNextColumn();
@@ -267,11 +267,11 @@ public unsafe class Trade
                 }
             }
 
-            ImGui.TableNextRow(ImGuiTableRowFlags.None, RowHeight);
+            ImGui.TableNextRow(ImGuiTableRowFlags.None, Row_Height);
             ImGui.TableNextColumn();
 
             if (GilImage.Value != null) {
-                ImGui.Image(GilImage.Value.ImGuiHandle, ImageSize);
+                ImGui.Image(GilImage.Value.ImGuiHandle, Image_Size);
             }
 
             ImGui.TableNextColumn();
@@ -316,7 +316,7 @@ public unsafe class Trade
 
         if (LastTarget != Target) {
             multiGil = [0, 0];
-            multiItemList = [new(), new()];
+            _multiItemList = [new(), new()];
         }
         // 如果交易成功，将内容累积进数组
         if (status) {
@@ -324,8 +324,8 @@ public unsafe class Trade
             multiGil[1] += _tradeGil[1];
             foreach (TradeItem item in list[0]) {
                 RecordItem rec;
-                if (multiItemList[0].ContainsKey(item.Id)) {
-                    rec = multiItemList[0][item.Id];
+                if (_multiItemList[0].ContainsKey(item.Id)) {
+                    rec = _multiItemList[0][item.Id];
                 } else {
                     rec = new(item.Id, item.Name, item.StackSize);
                 }
@@ -334,12 +334,12 @@ public unsafe class Trade
                 } else {
                     rec.NqCount += item.Count;
                 }
-                multiItemList[0][item.Id] = rec;
+                _multiItemList[0][item.Id] = rec;
             }
             foreach (TradeItem item in list[1]) {
                 RecordItem rec;
-                if (multiItemList[1].ContainsKey(item.Id)) {
-                    rec = multiItemList[1][item.Id];
+                if (_multiItemList[1].ContainsKey(item.Id)) {
+                    rec = _multiItemList[1][item.Id];
                 } else {
                     rec = new(item.Id, item.Name, item.StackSize);
                 }
@@ -348,12 +348,12 @@ public unsafe class Trade
                 } else {
                     rec.NqCount += item.Count;
                 }
-                multiItemList[1][item.Id] = rec;
+                _multiItemList[1][item.Id] = rec;
             }
         }
         if (Config.TradeNotify) {
             if (LastTarget == Target) {
-                Svc.ChatGui.Print(BuildMultiTradeSeString(_payload, status, Target, list, gil, multiItemList, multiGil).BuiltString);
+                Svc.ChatGui.Print(BuildMultiTradeSeString(_payload, status, Target, list, gil, _multiItemList, multiGil).BuiltString);
             } else {
                 Svc.ChatGui.Print(BuildTradeSeString(_payload, status, Target, list, gil).BuiltString);
             }

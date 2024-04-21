@@ -29,12 +29,12 @@ namespace Cashier.Windows
         private List<TradeHistory> showList = [];
 
         private readonly Cashier _cashier;
-        private bool visible = false;
-        private string? target = null;
+        private bool _visible = false;
+        private string? _target = null;
 
         public void Draw()
         {
-            if (!visible) {
+            if (!_visible) {
                 if (isHistoryChanged) {
                     isHistoryChanged = false;
                     Task.Run(() => { SaveHistory(); ReadHistory(); });
@@ -42,14 +42,14 @@ namespace Cashier.Windows
                 return;
             }
             ImGui.SetNextWindowSize(new Vector2(600, 800), ImGuiCond.FirstUseEver);
-            if (ImGui.Begin("交易历史记录", ref visible, ImGuiWindowFlags.NoScrollbar)) {
-                if (target == null) {
+            if (ImGui.Begin("交易历史记录", ref _visible, ImGuiWindowFlags.NoScrollbar)) {
+                if (_target == null) {
                     if (ImGui.Button("全部清除")) {
                         ClearHistory();
                     }
                 } else {
                     if (ImGui.Button("清除当前目标")) {
-                        ClearHistory(target);
+                        ClearHistory(_target);
                         Show();
                     }
                 }
@@ -61,14 +61,14 @@ namespace Cashier.Windows
                 }
                 ImGui.SameLine();
                 ImGui.SetNextItemWidth(300);
-                if (ImGui.BeginCombo("筛选目标", target ?? string.Empty)) {
-                    if (ImGui.Selectable(" ", target == null)) {
-                        if (target != null) {
+                if (ImGui.BeginCombo("筛选目标", _target ?? string.Empty)) {
+                    if (ImGui.Selectable(" ", _target == null)) {
+                        if (_target != null) {
                             Show();
                         }
                     }
                     foreach (var targetName in historyTargetSet) {
-                        var isSelected = (target ?? string.Empty) == targetName;
+                        var isSelected = (_target ?? string.Empty) == targetName;
                         if (ImGui.Selectable(targetName, isSelected)) {
                             if (!isSelected) {
                                 Show(targetName);
@@ -102,20 +102,20 @@ namespace Cashier.Windows
 
         public void Show(string? target = null)
         {
-            if (!visible) {
-                visible = true;
+            if (!_visible) {
+                _visible = true;
             } else {
-                if (this.target == target) {
-                    visible = false;
+                if (this._target == target) {
+                    _visible = false;
                     return;
                 }
             }
             if (target == null) {
-                this.target = null;
+                this._target = null;
                 showList = historyList;
             } else {
-                this.target = target;
-                showList = historyList.Where(i => i.Target == this.target).ToList();
+                this._target = target;
+                showList = historyList.Where(i => i.Target == this._target).ToList();
             }
         }
 
@@ -212,7 +212,7 @@ namespace Cashier.Windows
             };
             historyList.Add(tradeHistory);
             // null情况下，showList = historyList，无需重复添加
-            if (this.target == target) {
+            if (this._target == target) {
                 showList.Add(tradeHistory);
             }
             isHistoryChanged = true;
@@ -239,8 +239,8 @@ namespace Cashier.Windows
                     }
                 }
             }
-            if (target != null) {
-                showList = historyList.Where(i => i.Target == target).ToList();
+            if (_target != null) {
+                showList = historyList.Where(i => i.Target == _target).ToList();
             } else {
                 showList = historyList;
             }
@@ -314,7 +314,7 @@ namespace Cashier.Windows
             } else {
                 historyList.RemoveAll(i => i.Target == target);
                 historyTargetSet.Remove(target);
-                showList = historyList.Where(i => i.Target == this.target).ToList();
+                showList = historyList.Where(i => i.Target == this._target).ToList();
             }
             isHistoryChanged = true;
         }

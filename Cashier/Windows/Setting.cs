@@ -24,10 +24,10 @@ namespace Cashier.Windows
 
         private bool _visible = false;
 
-        private string editName = "", editSetPrice = "", editSetCount = "", editStackPrice = "";
-        private bool editQuality = false;
+        private string _editName = "", _editSetPrice = "", _editSetCount = "", _editStackPrice = "";
+        private bool _editQuality = false;
 
-        private Preset? editItem = null;
+        private Preset? _editItem = null;
         private List<Preset> _presetList => Config.PresetList;
 
         private static IDalamudTextureWrap? FailureImage => PluginUI.GetIcon(784);
@@ -44,7 +44,7 @@ namespace Cashier.Windows
         public void Draw()
         {
             if (!_visible) {
-                editItem = null;
+                _editItem = null;
                 return;
             }
             ImGui.SetNextWindowSize(Window_Size, ImGuiCond.Once);
@@ -75,18 +75,18 @@ namespace Cashier.Windows
                         EditItem(item);
 
                         string clipboard = "";
-                        editQuality = false;
+                        _editQuality = false;
                         try {
                             clipboard = ImGui.GetClipboardText().Replace("\n", string.Empty).Replace("\r", string.Empty).Replace("\t", string.Empty).Trim();
                         } catch (NullReferenceException) { }
                         if (clipboard.Contains(SeIconChar.HighQuality.ToIconString())) {
-                            editQuality = true;
+                            _editQuality = true;
                             clipboard = clipboard.Replace(SeIconChar.HighQuality.ToIconString(), string.Empty);
                         }
-                        editName = "";
-                        editSetPrice = "0";
-                        editSetCount = "1";
-                        editStackPrice = "0";
+                        _editName = "";
+                        _editSetPrice = "0";
+                        _editSetCount = "1";
+                        _editStackPrice = "0";
                     }
 
                     //删除所有预期
@@ -165,48 +165,48 @@ namespace Cashier.Windows
         }
         private void EditItem(Preset item)
         {
-            editItem = item;
-            editName = editItem.Name;
-            editQuality = editItem.Quality;
-            editSetPrice = editItem.SetPrice.ToString();
-            editSetCount = editItem.SetCount.ToString();
-            editStackPrice = editItem.StackPrice.ToString();
+            _editItem = item;
+            _editName = _editItem.Name;
+            _editQuality = _editItem.Quality;
+            _editSetPrice = _editItem.SetPrice.ToString();
+            _editSetCount = _editItem.SetCount.ToString();
+            _editStackPrice = _editItem.StackPrice.ToString();
         }
         private void DrawEditBlock()
         {
-            if (editItem == null)
+            if (_editItem == null)
                 return;
             bool save = false;
 
             //保存设置
             ImGui.SameLine();
-            if (Utils.DrawIconButton(FontAwesomeIcon.Check, -1) && !string.IsNullOrEmpty(editName)) {
+            if (Utils.DrawIconButton(FontAwesomeIcon.Check, -1) && !string.IsNullOrEmpty(_editName)) {
                 save = true;
             }
 
             //取消编辑
             ImGui.SameLine();
             if (Utils.DrawIconButton(FontAwesomeIcon.Times, -1)) {
-                editItem = null;
+                _editItem = null;
                 return;
             }
 
             // 光标+回车 自动保存
-            ImGui.InputText("名字", ref editName, 1288, ImGuiInputTextFlags.CharsNoBlank);
+            ImGui.InputText("名字", ref _editName, 1288, ImGuiInputTextFlags.CharsNoBlank);
             if (ImGui.IsItemFocused() && ImGui.GetIO().KeysDown[13]) {
                 save = true;
             }
             ImGui.SameLine();
-            ImGui.Checkbox(SeIconChar.HighQuality.ToIconString(), ref editQuality);
+            ImGui.Checkbox(SeIconChar.HighQuality.ToIconString(), ref _editQuality);
 
             ImGui.SetNextItemWidth(80);
-            ImGui.InputText(SeIconChar.Gil.ToIconString() + "每", ref editSetPrice, 32, ImGuiInputTextFlags.CharsDecimal);
+            ImGui.InputText(SeIconChar.Gil.ToIconString() + "每", ref _editSetPrice, 32, ImGuiInputTextFlags.CharsDecimal);
             if (ImGui.IsItemFocused() && ImGui.GetIO().KeysDown[13]) {
                 save = true;
             }
             ImGui.SameLine();
             ImGui.SetNextItemWidth(40);
-            ImGui.InputText("个", ref editSetCount, 4, ImGuiInputTextFlags.CharsDecimal);
+            ImGui.InputText("个", ref _editSetCount, 4, ImGuiInputTextFlags.CharsDecimal);
             if (ImGui.IsItemFocused() && ImGui.GetIO().KeysDown[13]) {
                 save = true;
             }
@@ -216,41 +216,41 @@ namespace Cashier.Windows
             ImGui.TextUnformatted("每组");
             ImGui.SameLine();
             ImGui.SetNextItemWidth(80);
-            ImGui.InputText(SeIconChar.Gil.ToIconString(), ref editStackPrice, 32, ImGuiInputTextFlags.CharsDecimal);
+            ImGui.InputText(SeIconChar.Gil.ToIconString(), ref _editStackPrice, 32, ImGuiInputTextFlags.CharsDecimal);
             if (ImGui.IsItemFocused() && ImGui.GetIO().KeysDown[13]) {
                 save = true;
             }
 
             // todo 候选表尝试使用弹出菜单
             int current_index = -1;
-            string[] items = SearchName(editName).ToArray();
+            string[] items = SearchName(_editName).ToArray();
             if (ImGui.ListBox("##候选表", ref current_index, items, items.Length, 3)) {
-                editName = items[current_index];
+                _editName = items[current_index];
             }
 
             if (save) {
-                var sameIndex = _presetList.FindIndex(i => i.Name == editName && i.Quality == editQuality);
-                if (sameIndex != -1 && _presetList.IndexOf(editItem) != sameIndex) {
-                    if (editItem.Id == 0) {
-                        _presetList.Remove(editItem);
+                var sameIndex = _presetList.FindIndex(i => i.Name == _editName && i.Quality == _editQuality);
+                if (sameIndex != -1 && _presetList.IndexOf(_editItem) != sameIndex) {
+                    if (_editItem.Id == 0) {
+                        _presetList.Remove(_editItem);
                     }
                     Chat.PrintWarning("物品与已有设定重复，无法添加");
                     save = false;
-                    editItem = null;
+                    _editItem = null;
                 } else {
-                    if (editName == string.Empty) {
-                        _presetList.Remove(editItem);
+                    if (_editName == string.Empty) {
+                        _presetList.Remove(_editItem);
                     } else {
-                        uint setPrice = uint.Parse(0 + editSetPrice);
-                        uint setCount = uint.Parse(0 + editSetCount);
-                        uint stackPrice = uint.Parse(0 + editStackPrice);
+                        uint setPrice = uint.Parse(0 + _editSetPrice);
+                        uint setCount = uint.Parse(0 + _editSetCount);
+                        uint stackPrice = uint.Parse(0 + _editStackPrice);
 
-                        _presetList[_presetList.IndexOf(editItem)] = new(editName, editQuality, setPrice, setCount, stackPrice);
+                        _presetList[_presetList.IndexOf(_editItem)] = new(_editName, _editQuality, setPrice, setCount, stackPrice);
                     }
 
                     Config.Save();
                     save = false;
-                    editItem = null;
+                    _editItem = null;
                 }
             }
         }
