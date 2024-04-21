@@ -37,10 +37,18 @@ public class Preset
 
     public string GetPresetString()
     {
-        if (StackPrice != 0 && StackSize == 1) { return $"{StackPrice:#,0}/个"; }
-        if ((SetCount == 0 || SetPrice == 0) && StackPrice != 0) { return $"{StackPrice:#,0}/组"; }
-        if (SetCount != 0 && SetPrice != 0 && StackPrice != 0) { return $"{SetPrice:#,0}/{SetCount}个, {StackPrice:#,0}/组"; }
-        if (SetCount != 0 && SetPrice != 0 && StackPrice == 0) { return $"{SetPrice:#,0}/{SetCount}个"; }
+        if (StackPrice != 0 && StackSize == 1) {
+            return $"{StackPrice:#,0}/个";
+        }
+        if ((SetCount == 0 || SetPrice == 0) && StackPrice != 0) {
+            return $"{StackPrice:#,0}/组";
+        }
+        if (SetCount != 0 && SetPrice != 0 && StackPrice != 0) {
+            return $"{SetPrice:#,0}/{SetCount}个, {StackPrice:#,0}/组";
+        }
+        if (SetCount != 0 && SetPrice != 0 && StackPrice == 0) {
+            return $"{SetPrice:#,0}/{SetCount}个";
+        }
         return $"未设定";
     }
 }

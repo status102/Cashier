@@ -43,7 +43,11 @@ namespace Cashier.Windows
             }
             ImGui.SetNextWindowSize(new Vector2(600, 800), ImGuiCond.FirstUseEver);
             if (ImGui.Begin("交易历史记录", ref visible, ImGuiWindowFlags.NoScrollbar)) {
-                if (target == null) { if (ImGui.Button("全部清除")) { ClearHistory(); } } else {
+                if (target == null) {
+                    if (ImGui.Button("全部清除")) {
+                        ClearHistory();
+                    }
+                } else {
                     if (ImGui.Button("清除当前目标")) {
                         ClearHistory(target);
                         Show();
@@ -87,7 +91,8 @@ namespace Cashier.Windows
                     var resultList = fileDialog.GetResults();
                     if (resultList.Count == 1) {
                         var savePath = resultList[0].Trim();
-                        if (!savePath.EndsWith(".csv")) { savePath += ".csv"; }
+                        if (!savePath.EndsWith(".csv")) { 
+                            savePath += ".csv"; }
                         ExportHistory(savePath);
                     }
                 }
@@ -215,7 +220,8 @@ namespace Cashier.Windows
 
         private void ReadHistory()
         {
-            if (Svc.ClientState.LocalPlayer == null) { return; }
+            if (Svc.ClientState.LocalPlayer == null) { 
+                return; }
             var playerName = Svc.ClientState.LocalPlayer!.Name.TextValue;
             var playerWorld = Svc.ClientState.LocalPlayer!.HomeWorld.GameData!.Name.RawString;
 
@@ -242,14 +248,16 @@ namespace Cashier.Windows
 
         private void SaveHistory()
         {
-            if (Svc.ClientState.LocalPlayer == null) { return; }
+            if (Svc.ClientState.LocalPlayer == null) { 
+                return; }
             var playerName = Svc.ClientState.LocalPlayer!.Name.TextValue;
             var playerWorld = Svc.ClientState.LocalPlayer!.HomeWorld.GameData!.Name.RawString;
 
             using FileStream stream = File.Open(Path.Join(_cashier.PluginInterface.ConfigDirectory.FullName, $"{playerWorld}_{playerName}.txt"), FileMode.Create);
             StreamWriter writer = new(stream);
             foreach (TradeHistory tradeHistory in historyList) {
-                if (tradeHistory.Visible) { writer.WriteLine(tradeHistory.ToString()); }
+                if (tradeHistory.Visible) { 
+                    writer.WriteLine(tradeHistory.ToString()); }
             }
             writer.Flush();
         }
@@ -260,7 +268,8 @@ namespace Cashier.Windows
         /// <param name="path">保存路径</param>
         private void ExportHistory(string path)
         {
-            if (Svc.ClientState.LocalPlayer == null) { return; }
+            if (Svc.ClientState.LocalPlayer == null) { 
+                return; }
             Svc.PluginLog.Information($"[{Cashier.Name}]保存交易历史: {path}");
 
             var saveList = showList.Where(i => i.Visible).Select(i => new string[7] {
@@ -318,7 +327,8 @@ namespace Cashier.Windows
         }
         public void Dispose()
         {
-            if (isHistoryChanged) { SaveHistory(); }
+            if (isHistoryChanged) { 
+                SaveHistory(); }
         }
         #endregion
     }

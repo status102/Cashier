@@ -180,25 +180,36 @@ namespace Cashier.Windows
 
             //保存设置
             ImGui.SameLine();
-            if (Utils.DrawIconButton(FontAwesomeIcon.Check, -1) && !string.IsNullOrEmpty(editName)) { save = true; }
+            if (Utils.DrawIconButton(FontAwesomeIcon.Check, -1) && !string.IsNullOrEmpty(editName)) {
+                save = true;
+            }
 
             //取消编辑
             ImGui.SameLine();
-            if (Utils.DrawIconButton(FontAwesomeIcon.Times, -1)) { editItem = null; return; }
+            if (Utils.DrawIconButton(FontAwesomeIcon.Times, -1)) {
+                editItem = null;
+                return;
+            }
 
             // 光标+回车 自动保存
             ImGui.InputText("名字", ref editName, 1288, ImGuiInputTextFlags.CharsNoBlank);
-            if (ImGui.IsItemFocused() && ImGui.GetIO().KeysDown[13]) { save = true; }
+            if (ImGui.IsItemFocused() && ImGui.GetIO().KeysDown[13]) {
+                save = true;
+            }
             ImGui.SameLine();
             ImGui.Checkbox(SeIconChar.HighQuality.ToIconString(), ref editQuality);
 
             ImGui.SetNextItemWidth(80);
             ImGui.InputText(SeIconChar.Gil.ToIconString() + "每", ref editSetPrice, 32, ImGuiInputTextFlags.CharsDecimal);
-            if (ImGui.IsItemFocused() && ImGui.GetIO().KeysDown[13]) { save = true; }
+            if (ImGui.IsItemFocused() && ImGui.GetIO().KeysDown[13]) {
+                save = true;
+            }
             ImGui.SameLine();
             ImGui.SetNextItemWidth(40);
             ImGui.InputText("个", ref editSetCount, 4, ImGuiInputTextFlags.CharsDecimal);
-            if (ImGui.IsItemFocused() && ImGui.GetIO().KeysDown[13]) { save = true; }
+            if (ImGui.IsItemFocused() && ImGui.GetIO().KeysDown[13]) {
+                save = true;
+            }
             ImGui.SameLine();
             ImGui.Spacing();
             ImGui.SameLine();
@@ -206,12 +217,16 @@ namespace Cashier.Windows
             ImGui.SameLine();
             ImGui.SetNextItemWidth(80);
             ImGui.InputText(SeIconChar.Gil.ToIconString(), ref editStackPrice, 32, ImGuiInputTextFlags.CharsDecimal);
-            if (ImGui.IsItemFocused() && ImGui.GetIO().KeysDown[13]) { save = true; }
+            if (ImGui.IsItemFocused() && ImGui.GetIO().KeysDown[13]) {
+                save = true;
+            }
 
             // todo 候选表尝试使用弹出菜单
             int current_index = -1;
             string[] items = SearchName(editName).ToArray();
-            if (ImGui.ListBox("##候选表", ref current_index, items, items.Length, 3)) { editName = items[current_index]; }
+            if (ImGui.ListBox("##候选表", ref current_index, items, items.Length, 3)) {
+                editName = items[current_index];
+            }
 
             if (save) {
                 var sameIndex = _presetList.FindIndex(i => i.Name == editName && i.Quality == editQuality);

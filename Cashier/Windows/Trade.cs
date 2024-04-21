@@ -497,7 +497,9 @@ public unsafe class Trade
         // 支付
         if (multiGil[1] != 0 || multiItems[1].Count != 0) {
             builder.Add(new NewLinePayload()).AddText("==>>  ");
-            if (multiGil[1] != 0) { builder.AddText($"{multiGil[1]:#,0}{(char)SeIconChar.Gil}"); }
+            if (multiGil[1] != 0) {
+                builder.AddText($"{multiGil[1]:#,0}{(char)SeIconChar.Gil}");
+            }
 
             foreach (var itemId in multiItems[1].Keys) {
                 var item = multiItems[1][itemId];
