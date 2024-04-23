@@ -105,7 +105,7 @@ public unsafe class Trade
         _cashier.HookHelper.OnTradeBegined += OnTradeBegined;
         _cashier.HookHelper.OnTradeFinished += OnTradeFinished;
         _cashier.HookHelper.OnTradeCanceled += OnTradeCancelled;
-        _cashier.HookHelper.OnTradeConfirmChanged -= OnTradeConfirmChanged;
+        _cashier.HookHelper.OnTradeConfirmChanged -= OnTradePreCheckChanged;
         _cashier.HookHelper.OnTradeFinalCheck += OnTradeFinalChecked;
         _cashier.HookHelper.OnTradeMoneyChanged += OnTradeMoneyChanged;
         _cashier.HookHelper.OnSetTradeItemSlot += OnSetTradeSlotItem;
@@ -118,7 +118,7 @@ public unsafe class Trade
         _cashier.HookHelper.OnTradeBegined -= OnTradeBegined;
         _cashier.HookHelper.OnTradeFinished -= OnTradeFinished;
         _cashier.HookHelper.OnTradeCanceled -= OnTradeCancelled;
-        _cashier.HookHelper.OnTradeConfirmChanged -= OnTradeConfirmChanged;
+        _cashier.HookHelper.OnTradeConfirmChanged -= OnTradePreCheckChanged;
         _cashier.HookHelper.OnTradeFinalCheck -= OnTradeFinalChecked;
         _cashier.HookHelper.OnTradeMoneyChanged -= OnTradeMoneyChanged;
         _cashier.HookHelper.OnSetTradeItemSlot -= OnSetTradeSlotItem;
@@ -692,11 +692,12 @@ public unsafe class Trade
     /// 某方确认交易条件
     /// </summary>
     /// <param name="isPlayer1">是否为玩家1(自己)</param>
-    private void OnTradeConfirmChanged(nint objectId, bool confirmed)
+    private void OnTradePreCheckChanged(nint objectId, bool confirmed)
     {
         if (objectId == Svc.ClientState.LocalPlayer!.ObjectId) {
             _tradePlayerConfirm[0] = confirmed;
         } else {
+            _cashier.PluginUi.Main.OnTradePreCheckChanged(Target.ObjectId, confirmed, _tradeGil[0]);
             _tradePlayerConfirm[1] = confirmed;
         }
     }

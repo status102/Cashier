@@ -258,6 +258,19 @@ public unsafe sealed class Main : IWindow
 
     }
 
+    public void OnTradePreCheckChanged(uint objectId, bool confirm, uint money)
+    {
+        if (!_visible || !_isRunning || !confirm) {
+            return;
+        }
+        if (!_tradePlan.TryGetValue(objectId, out var value)) {
+            AddonTradeHelper.Cancel();
+        } else if (money <= value) {
+            TaskManager.DelayNext(50);
+            TaskManager.Enqueue(AddonTradeHelper.Step.PreCheck);
+        }
+    }
+
     public void OnTradeFinalChecked(uint objectId, uint money)
     {
         if (!_visible || !_isRunning) {
