@@ -22,6 +22,8 @@ public unsafe sealed class Main : IWindow
     private Configuration Config => _cashier.Config;
     private const uint Maximum_Gil_Per_Times = 1_000_000;
     private readonly static Vector2 Window_Size = new(720, 640);
+    private readonly Random Random = new(DateTime.Now.Millisecond);
+    private int RandomDelay => Random.Next(50, 200);
     private int[] MoneyButton = [-50, -10, 10, 50];
 
 
@@ -228,11 +230,10 @@ public unsafe sealed class Main : IWindow
         if (_lastTradeObjectId != default && _tradePlan.ContainsKey(_lastTradeObjectId)) {
             TaskManager.Enqueue(() => RequestTrade(_lastTradeObjectId));
         }
-        _tradePlan.Keys
-            .ToList()
+        _tradePlan.Keys.ToList()
             .ForEach(id =>
             {
-                TaskManager.DelayNext(50);
+                TaskManager.DelayNext(RandomDelay);
                 TaskManager.Enqueue(() => RequestTrade(id));
             });
     }
@@ -248,9 +249,9 @@ public unsafe sealed class Main : IWindow
         TaskManager.Abort();
         _lastTradeObjectId = Trade.Target.ObjectId;
         if (_tradePlan.TryGetValue(_lastTradeObjectId, out var value)) {
-            TaskManager.DelayNext(200);
+            TaskManager.DelayNext(RandomDelay);
             TaskManager.Enqueue(() => SetGil(value >= Maximum_Gil_Per_Times ? Maximum_Gil_Per_Times : (uint)value));
-            TaskManager.DelayNext(200);
+            TaskManager.DelayNext(RandomDelay);
             TaskManager.Enqueue(AddonTradeHelper.Step.PreCheck);
         } else {
             AddonTradeHelper.Cancel();
@@ -266,7 +267,7 @@ public unsafe sealed class Main : IWindow
         if (!_tradePlan.TryGetValue(objectId, out var value)) {
             AddonTradeHelper.Cancel();
         } else if (money <= value) {
-            TaskManager.DelayNext(50);
+            TaskManager.DelayNext(RandomDelay);
             TaskManager.Enqueue(AddonTradeHelper.Step.PreCheck);
         }
     }
@@ -279,7 +280,7 @@ public unsafe sealed class Main : IWindow
 
         if (!_tradePlan.TryGetValue(objectId, out var value)) {
         } else if (money <= value) {
-            TaskManager.DelayNext(50);
+            TaskManager.DelayNext(RandomDelay);
             TaskManager.Enqueue(() => AddonTradeHelper.Step.FinalCheck());
         }
     }
