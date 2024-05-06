@@ -11,3 +11,8 @@
 - [x] 获取对面道具
 - [x] 获取对面金币
 - [x] 获取对面确认
+
+
+```
+https://raw.githubusercontent.com/status102/DalamudPluginRepo_CN/main/repo.json
+```
