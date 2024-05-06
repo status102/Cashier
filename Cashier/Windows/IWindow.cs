@@ -1,9 +1,7 @@
 ﻿using System;
 
-namespace Cashier.Windows
+namespace Cashier.Windows;
+public interface IWindow : IDisposable
 {
-	public interface IWindow : IDisposable
-	{
-		public void Draw();
-	}
+    public void Draw();
 }
