@@ -9,7 +9,6 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
-using static Cashier.Model.TradeHistory;
 
 namespace Cashier.Windows;
 public sealed class History : IWindow

@@ -2,7 +2,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Authors>status102</Authors>
-    <Version>0.1.3.3</Version>
+    <Version>0.1.4.0</Version>
 
   </PropertyGroup>
 

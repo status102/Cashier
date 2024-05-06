@@ -63,7 +63,7 @@ public class HistoryItem
     private const char COUNT_SPLIT = 'x';
     public string Name { get; init; }
     public int Count { get; init; }
-    private bool Quality = false;
+    private bool Quality { get; init; } = false;
     public IDalamudTextureWrap? Icon { get; init; }
 
     public HistoryItem(string name, int count)

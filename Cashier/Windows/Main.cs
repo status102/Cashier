@@ -15,7 +15,7 @@ public unsafe sealed class Main : IWindow
     {
         _cashier = cashier;
         SendMoney = new(cashier);
-        TabList = [SendMoney, SendMoney];
+        TabList = [SendMoney];
     }
 
     public void Dispose()
@@ -41,11 +41,10 @@ public unsafe sealed class Main : IWindow
             return;
         }
         ImGui.SetNextWindowSize(Window_Size, ImGuiCond.Once);
-        if (ImGui.Begin($"主窗口##{Cashier.Name}Main", ref _visible)) {
+        if (ImGui.Begin($"{Cashier.Name} By Status102##{Cashier.Name}Main", ref _visible)) {
             if (ImGui.BeginTabBar("MainTabBar", ImGuiTabBarFlags.FittingPolicyScroll)) {
                 int i = 0;
                 foreach (var item in TabList) {
-                    item.Show();
                     if (ImGui.BeginTabItem(item.TabName + i)) {
                         if (ImGui.BeginChild(item.TabName)) {
                             item.Draw();
