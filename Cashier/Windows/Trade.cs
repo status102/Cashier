@@ -180,7 +180,7 @@ public unsafe class Trade
             // 显示当前交易对象的记录
             ImGui.SameLine();
             if (ImGuiComponents.IconButton(FontAwesomeIcon.History)) {
-                _cashier.PluginUi.History.Show(Target.PlayerName + "@" + Target.WorldName);
+                _cashier.PluginUi.History.Show(Target.WorldName + "@" + Target.PlayerName);
             }
             if (ImGui.IsItemHovered()) {
                 ImGui.SetTooltip("显示当前交易对象的交易记录");
@@ -312,7 +312,7 @@ public unsafe class Trade
                 _tradeItemList[1].Where(i => i.Id != 0).ToArray()
         ];
 
-        _cashier.PluginUi.History.AddHistory(status, $"{Target.PlayerName}@{Target.WorldName}", gil, list);
+        _cashier.PluginUi.History.AddHistory(status, $"{Target.WorldName}@{Target.PlayerName}", gil, list);
 
         if (LastTarget != Target) {
             multiGil = [0, 0];
@@ -541,7 +541,7 @@ public unsafe class Trade
     {
         PlayerPayload? payload = (PlayerPayload?)str.Payloads.Find(i => i.Type == PayloadType.Player);
         if (payload != null) {
-            _cashier.PluginUi.History.Show(payload.PlayerName + "@" + payload.World.Name.RawString);
+            _cashier.PluginUi.History.Show(payload.World.Name.RawString + "@" + payload.PlayerName);
         } else {
             Commons.Chat.PrintError("未找到交易对象");
             Svc.PluginLog.Verbose($"未找到交易对象，data=[{str.ToJson()}]");
