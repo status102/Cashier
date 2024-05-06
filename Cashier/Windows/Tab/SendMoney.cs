@@ -6,6 +6,7 @@ using ECommons.Automation;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using ImGuiNET;
+using Lumina.Excel.GeneratedSheets;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -13,7 +14,7 @@ using System.Linq;
 using System.Timers;
 
 namespace Cashier.Windows.Tab;
-public class SendMoney : ITabPage
+public sealed class SendMoney : ITabPage
 {
     public string TabName { get; } = "老板队自动结账";
     private readonly Cashier _cashier;
@@ -102,7 +103,9 @@ public class SendMoney : ITabPage
         }
         ImGui.SameLine();
         if (ImGui.Button($"归0##All0")) {
-            _editPlan.Clear();
+            foreach (var key in _editPlan.Keys) {
+                _editPlan[key] = 0;
+            };
         }
 
         _teamHelper.TeamList.ForEach(p =>
