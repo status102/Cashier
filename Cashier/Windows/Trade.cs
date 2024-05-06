@@ -24,9 +24,9 @@ using System.Timers;
 namespace Cashier.Windows;
 public unsafe class Trade
 {
-    private Cashier _cashier { get; init; }
+    private readonly Cashier _cashier;
     private Configuration Config => _cashier.Config;
-    private DalamudLinkPayload _payload { get; init; }
+    private readonly DalamudLinkPayload _payload;
     /// <summary>
     /// 窗口大小
     /// </summary>
@@ -62,20 +62,6 @@ public unsafe class Trade
     /// 连续交易物品记录，Key itemId，Value (name, nq, hq, stackSize)
     /// </summary>
     private Dictionary<uint, RecordItem>[] _multiItemList = [new(), new()];
-    private class RecordItem
-    {
-        public uint Id { get; private init; }
-        public string Name { get; private init; }
-        public int NqCount { get; set; } = 0;
-        public int HqCount { get; set; } = 0;
-        public uint StackSize { get; private init; }
-        public RecordItem(uint id, string? name, uint stackSize)
-        {
-            Id = id;
-            Name = name ?? "???";
-            StackSize = stackSize;
-        }
-    }
     private uint[] multiGil = [0, 0];
     /// <summary>
     /// 交易目标
@@ -101,7 +87,7 @@ public unsafe class Trade
         });
         _refreshTimer.Elapsed += (_, __) => RefreshData();
 
-        _cashier.HookHelper.OnSetTradeTarget += SetTradeTarget;
+        _cashier.HookHelper.OnSetTradeTarget += OnSetTradeTarget;
         _cashier.HookHelper.OnTradeBegined += OnTradeBegined;
         _cashier.HookHelper.OnTradeFinished += OnTradeFinished;
         _cashier.HookHelper.OnTradeCanceled += OnTradeCancelled;
@@ -114,7 +100,7 @@ public unsafe class Trade
 
     public void Dispose()
     {
-        _cashier.HookHelper.OnSetTradeTarget -= SetTradeTarget;
+        _cashier.HookHelper.OnSetTradeTarget -= OnSetTradeTarget;
         _cashier.HookHelper.OnTradeBegined -= OnTradeBegined;
         _cashier.HookHelper.OnTradeFinished -= OnTradeFinished;
         _cashier.HookHelper.OnTradeCanceled -= OnTradeCancelled;
@@ -306,13 +292,9 @@ public unsafe class Trade
     /// <param name="status">交易状态</param>
     private void Finish(bool status)
     {
-        uint[] gil = [_tradeGil[0], _tradeGil[1]];
-        TradeItem[][] list = [
-            _tradeItemList[0].Where(i => i.Id != 0).ToArray(),
-                _tradeItemList[1].Where(i => i.Id != 0).ToArray()
-        ];
+        var list = _tradeItemList.Select(i => i.Convert().ToArray()).ToArray();
 
-        _cashier.PluginUi.History.AddHistory(status, $"{Target.WorldName}@{Target.PlayerName}", gil, list);
+        _cashier.PluginUi.History.AddHistory(status, $"{Target.WorldName}@{Target.PlayerName}", _tradeGil, _tradeItemList);
 
         if (LastTarget != Target) {
             multiGil = [0, 0];
@@ -322,40 +304,22 @@ public unsafe class Trade
         if (status) {
             multiGil[0] += _tradeGil[0];
             multiGil[1] += _tradeGil[1];
-            foreach (TradeItem item in list[0]) {
-                RecordItem rec;
-                if (_multiItemList[0].ContainsKey(item.Id)) {
-                    rec = _multiItemList[0][item.Id];
-                } else {
-                    rec = new(item.Id, item.Name, item.StackSize);
+            foreach (RecordItem item in list[0]) {
+                if (!_multiItemList[0].TryAdd(item.Id, item)) {
+                    _multiItemList[0][item.Id] += item;
                 }
-                if (item.Quality) {
-                    rec.HqCount += item.Count;
-                } else {
-                    rec.NqCount += item.Count;
-                }
-                _multiItemList[0][item.Id] = rec;
             }
-            foreach (TradeItem item in list[1]) {
-                RecordItem rec;
-                if (_multiItemList[1].ContainsKey(item.Id)) {
-                    rec = _multiItemList[1][item.Id];
-                } else {
-                    rec = new(item.Id, item.Name, item.StackSize);
+            foreach (RecordItem item in list[1]) {
+                if (!_multiItemList[1].TryAdd(item.Id, item)) {
+                    _multiItemList[1][item.Id] += item;
                 }
-                if (item.Quality) {
-                    rec.HqCount += item.Count;
-                } else {
-                    rec.NqCount += item.Count;
-                }
-                _multiItemList[1][item.Id] = rec;
             }
         }
         if (Config.TradeNotify) {
             if (LastTarget == Target) {
-                Svc.ChatGui.Print(BuildMultiTradeSeString(_payload, status, Target, list, gil, _multiItemList, multiGil).BuiltString);
+                Svc.ChatGui.Print(BuildMultiTradeSeString(_payload, status, Target, _tradeItemList, _tradeGil, _multiItemList, multiGil).BuiltString);
             } else {
-                Svc.ChatGui.Print(BuildTradeSeString(_payload, status, Target, list, gil).BuiltString);
+                Svc.ChatGui.Print(BuildTradeSeString(_payload, status, Target, _tradeItemList, _tradeGil).BuiltString);
             }
         }
         if (status) {
@@ -407,10 +371,9 @@ public unsafe class Trade
         }
         // 获得
         if (gil[0] != 0 || items[0].Length != 0) {
-            builder.Add(new NewLinePayload());
-            builder.AddText("<<==  ");
+            builder.Add(new NewLinePayload()).AddText("<<==  ");
             if (gil[0] != 0) {
-                builder.AddText($"{gil[0]:#,0}{(char)SeIconChar.Gil}");
+                builder.AddText($"{gil[0]:#,0}{SeIconChar.Gil.ToIconChar()}");
             }
             for (int i = 0; i < items[0].Length; i++) {
                 if (i != 0 || gil[0] != 0) {
@@ -424,10 +387,9 @@ public unsafe class Trade
 
         // 支付
         if (gil[1] != 0 || items[1].Length != 0) {
-            builder.Add(new NewLinePayload());
-            builder.AddText("==>>  ");
+            builder.Add(new NewLinePayload()).AddText("==>>  ");
             if (gil[1] != 0) {
-                builder.AddText($"{gil[1]:#,0}{(char)SeIconChar.Gil}");
+                builder.AddText($"{gil[1]:#,0}{SeIconChar.Gil.ToIconChar()}");
             }
             for (int i = 0; i < items[1].Length; i++) {
                 if (i != 0 || gil[1] != 0) {
@@ -543,7 +505,7 @@ public unsafe class Trade
         if (payload != null) {
             _cashier.PluginUi.History.Show(payload.World.Name.RawString + "@" + payload.PlayerName);
         } else {
-            Commons.Chat.PrintError("未找到交易对象");
+            Chat.PrintError("未找到交易对象");
             Svc.PluginLog.Verbose($"未找到交易对象，data=[{str.ToJson()}]");
         }
     }
@@ -602,7 +564,7 @@ public unsafe class Trade
     /// 设置交易目标
     /// </summary>
     /// <param name="objectId"></param>
-    private void SetTradeTarget(nint objectId)
+    private void OnSetTradeTarget(nint objectId)
     {
         var player = Svc.ObjectTable.FirstOrDefault(i => i.ObjectId == objectId) as PlayerCharacter;
         if (player != null) {

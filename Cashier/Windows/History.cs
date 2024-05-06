@@ -195,8 +195,8 @@ public sealed class History : IWindow
 
     public void AddHistory(bool status, string target, uint[] gil, TradeItem[][] items)
     {
-        var giveList = items[0].Select(i => new TradeHistory.HistoryItem(i.IconId, i.Name ?? "???", i.Count, i.Quality)).ToArray();
-        var receiviList = items[1].Select(i => new TradeHistory.HistoryItem(i.IconId, i.Name ?? "???", i.Count, i.Quality)).ToArray();
+        var giveList = items[0].Select(i => new HistoryItem(i)).ToArray();
+        var receiviList = items[1].Select(i => new HistoryItem(i)).ToArray();
 
         TradeHistory tradeHistory = new()
         {
