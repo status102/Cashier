@@ -293,7 +293,8 @@ public unsafe class Trade
     /// <param name="status">交易状态</param>
     private void Finish(bool status)
     {
-        var list = _tradeItemList.Select(i => i.Convert().ToArray()).ToArray();
+        var recordList = _tradeItemList.Select(i => i.Convert().ToArray()).ToArray();
+        var list = _tradeItemList.Select(i => i.Where(j => j.Id != 0).ToArray()).ToArray();
 
         _cashier.PluginUi.History.AddHistory(status, $"{Target.WorldName}@{Target.PlayerName}", _tradeGil, _tradeItemList);
 
@@ -305,12 +306,12 @@ public unsafe class Trade
         if (status) {
             multiGil[0] += _tradeGil[0];
             multiGil[1] += _tradeGil[1];
-            foreach (RecordItem item in list[0]) {
+            foreach (RecordItem item in recordList[0]) {
                 if (!_multiItemList[0].TryAdd(item.Id, item)) {
                     _multiItemList[0][item.Id] += item;
                 }
             }
-            foreach (RecordItem item in list[1]) {
+            foreach (RecordItem item in recordList[1]) {
                 if (!_multiItemList[1].TryAdd(item.Id, item)) {
                     _multiItemList[1][item.Id] += item;
                 }
@@ -318,9 +319,9 @@ public unsafe class Trade
         }
         if (Config.TradeNotify) {
             if (LastTarget == Target) {
-                Svc.ChatGui.Print(BuildMultiTradeSeString(_payload, status, Target, _tradeItemList, _tradeGil, _multiItemList, multiGil).BuiltString);
+                Svc.ChatGui.Print(BuildMultiTradeSeString(_payload, status, Target, list, _tradeGil, _multiItemList, multiGil).BuiltString);
             } else {
-                Svc.ChatGui.Print(BuildTradeSeString(_payload, status, Target, _tradeItemList, _tradeGil).BuiltString);
+                Svc.ChatGui.Print(BuildTradeSeString(_payload, status, Target, list, _tradeGil).BuiltString);
             }
         }
         if (status) {
@@ -595,7 +596,7 @@ public unsafe class Trade
                 var countTextNode = imageNode->Component->UldManager.NodeList[6]->GetAsAtkTextNode();
                 return int.TryParse(countTextNode->NodeText.ToString(), out int result) ? result : -1;
             } catch (Exception e) {
-                Svc.PluginLog.Error("获取交易物品数量失败, nodeId:" + nodeId, e.Message);
+                Svc.PluginLog.Error($"获取交易物品数量失败, nodeId:{nodeId}\n" + e.Message);
                 return -1;
             }
         }
