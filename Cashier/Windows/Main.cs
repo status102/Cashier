@@ -45,7 +45,7 @@ public unsafe sealed class Main : IWindow
             if (ImGui.BeginTabBar("MainTabBar", ImGuiTabBarFlags.FittingPolicyScroll)) {
                 int i = 0;
                 foreach (var item in TabList) {
-                    if (ImGui.BeginTabItem(item.TabName + i)) {
+                    if (ImGui.BeginTabItem(item.TabName + $"##{i}")) {
                         if (ImGui.BeginChild(item.TabName)) {
                             item.Draw();
                             ImGui.EndChild();
