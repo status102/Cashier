@@ -1,5 +1,6 @@
 ﻿using Cashier.Windows.Tab;
 using ImGuiNET;
+using System.Linq;
 using System.Numerics;
 
 namespace Cashier.Windows;
@@ -8,14 +9,15 @@ public unsafe sealed class Main : IWindow
     private readonly Cashier _cashier;
     private readonly static Vector2 Window_Size = new(720, 640);
     private readonly ITabPage[] TabList;
-    public SendMoney SendMoney { get; private init; }
+    public T? Get<T>() where T : ITabPage => TabList.OfType<T>().FirstOrDefault();
 
     private bool _visible;
     public Main(Cashier cashier)
     {
         _cashier = cashier;
-        SendMoney = new(cashier);
-        TabList = [SendMoney];
+        TabList = [
+            new SendMoney(cashier),
+        ];
     }
 
     public void Dispose()

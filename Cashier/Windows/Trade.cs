@@ -1,6 +1,7 @@
 ﻿using Cashier.Commons;
 using Cashier.Model;
 using Cashier.Models;
+using Cashier.Windows.Tab;
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.ClientState.Objects.SubKinds;
 using Dalamud.Game.Text;
@@ -545,7 +546,7 @@ public unsafe class Trade
         }
         IsTrading = false;
         _refreshTimer.Stop();
-        _cashier.PluginUi.Main.SendMoney.OnTradeFinished(Target.ObjectId, _tradeGil[0]);
+        _cashier.PluginUi.Main.Get<SendMoney>()?.OnTradeFinished(Target.ObjectId, _tradeGil[0]);
         Finish(true);
     }
 
@@ -556,7 +557,7 @@ public unsafe class Trade
             Svc.PluginLog.Warning("未开始交易时进入最终确认");
             return;
         }
-        _cashier.PluginUi.Main.SendMoney.OnTradeFinalChecked(Target.ObjectId, _tradeGil[0]);
+        _cashier.PluginUi.Main.Get<SendMoney>()?.OnTradeFinalChecked(Target.ObjectId, _tradeGil[0]);
     }
 
 
@@ -659,7 +660,7 @@ public unsafe class Trade
         if (objectId == Svc.ClientState.LocalPlayer!.ObjectId) {
             _tradePlayerConfirm[0] = confirmed;
         } else {
-            _cashier.PluginUi.Main.SendMoney.OnTradePreCheckChanged(Target.ObjectId, confirmed, _tradeGil[0]);
+            _cashier.PluginUi.Main.Get<SendMoney>()?.OnTradePreCheckChanged(Target.ObjectId, confirmed, _tradeGil[0]);
             _tradePlayerConfirm[1] = confirmed;
         }
     }
