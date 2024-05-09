@@ -86,14 +86,15 @@ public sealed class HookHelper : IDisposable
 
     #region 交易目标及状态
 
-    [Signature("48 89 6C 24 18 57 41 56 41 57 48 83 EC 50 48 8B E9 44 8B FA", DetourName = nameof(DetourTradeRequest))]
+    [Signature("48 89 6C 24 ?? 57 41 56 41 57 48 83 EC ?? 48 8B E9 44 8B FA", DetourName = nameof(DetourTradeRequest))]
     private Hook<TradeRequest>? _tradeRequestHook;
     private delegate nint TradeRequest(nint a1, nint a2);
     public nint DetourTradeRequest(nint a1, nint objectId)
     {
-        // 对无法发起交易的对象、超距，2
+        // a1: InventoryManager.Instance / baseAddress + 0x21F16C0
         // 正常0
-        // 现在无法进行交易，19
+        // 对无法发起交易的对象、超距，2 ||(48|1310) 无法向“忙碌中”状态的玩家申请交易。| 距离太远。
+        // 现在无法进行交易，19 || /(无法战斗|制作|采集)状态下无法进行该操作。/
         OnSetTradeTarget?.Invoke(objectId);
         return _tradeRequestHook!.Original(a1, objectId);
     }

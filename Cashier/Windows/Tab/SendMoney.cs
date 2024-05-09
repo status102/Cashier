@@ -3,6 +3,7 @@ using Cashier.Commons;
 using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using ECommons.Automation;
+using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
 using FFXIVClientStructs.FFXIV.Client.Game.Object;
 using ImGuiNET;
@@ -266,21 +267,19 @@ public sealed class SendMoney : ITabPage
 
     private unsafe void RequestTrade(uint objectId)
     {
-        var baseAddress = Process.GetCurrentProcess().MainModule?.BaseAddress;
         var target = Svc.ObjectTable.SearchById(objectId);
-        if (_enhance && baseAddress is not null && target is not null) {
+        if (_enhance && target is not null) {
             TargetSystem.Instance()->Target = (GameObject*)target.Address;
-            _cashier.HookHelper.DetourTradeRequest((nint)(baseAddress + 0x21F16C0), (nint)objectId);
+            _cashier.HookHelper.DetourTradeRequest((nint)InventoryManager.Instance(), (nint)objectId);
         } else {
             AddonTradeHelper.RequestTrade(objectId);
         }
     }
 
-    private void SetGil(uint money)
+    private unsafe void SetGil(uint money)
     {
-        var baseAddress = Process.GetCurrentProcess().MainModule?.BaseAddress;
-        if (_enhance && baseAddress is not null) {
-            _cashier.HookHelper.DetourTradeMyMoney((nint)(baseAddress + 0x21F16C0), money);
+        if (_enhance) {
+            _cashier.HookHelper.DetourTradeMyMoney((nint)InventoryManager.Instance(), money);
         } else {
             AddonTradeHelper.Step.SetCount(money);
         }
