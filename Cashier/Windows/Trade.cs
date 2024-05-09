@@ -583,17 +583,20 @@ public unsafe class Trade
     public void RefreshData()
     {
         uint[] AddonIndex = [8, 9, 10, 11, 12, 19, 20, 21, 22, 23];
-        int getCount(uint nodeId)
+        int getCount(uint nodeId, bool isMySlot)
         {
             if (!IsTrading || addonTrade == default) {
                 return -1;
             }
             try {
-                var imageNode = addonTrade->GetNodeById(nodeId)->GetAsAtkComponentNode()->Component->UldManager.NodeList[2]->GetAsAtkComponentNode();
-                if (!imageNode->AtkResNode.IsVisible) {
-                    return -1;
+                var imageNode = addonTrade->GetNodeById(nodeId)->GetAsAtkComponentNode();
+                if (isMySlot) {
+                    imageNode = imageNode->Component->UldManager.NodeList[2]->GetAsAtkComponentNode();
                 }
                 var countTextNode = imageNode->Component->UldManager.NodeList[6]->GetAsAtkTextNode();
+                if (string.IsNullOrEmpty(countTextNode->NodeText.ToString())) {
+                    return 1;
+                }
                 return int.TryParse(countTextNode->NodeText.ToString(), out int result) ? result : -1;
             } catch (Exception e) {
                 Svc.PluginLog.Error($"获取交易物品数量失败, nodeId:{nodeId}\n" + e.Message);
@@ -602,7 +605,7 @@ public unsafe class Trade
         }
         for (int i = 0; i < 10; i++) {
             if (IsTrading && _tradeItemList[i < 5 ? 0 : 1][i % 5] is TradeItem { Id: > 0 } item) {
-                item.Count = getCount(AddonIndex[i]);
+                item.Count = getCount(AddonIndex[i], i < 5);
             }
         }
     }

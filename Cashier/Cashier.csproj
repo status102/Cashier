@@ -2,7 +2,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Authors>status102</Authors>
-    <Version>0.1.4.1</Version>
+    <Version>0.1.4.2</Version>
 
   </PropertyGroup>
 
@@ -26,11 +26,8 @@
 
 
   <ItemGroup>
-    <Compile Remove="Data\**" />
     <Compile Remove="Image\**" />
-    <EmbeddedResource Remove="Data\**" />
     <EmbeddedResource Remove="Image\**" />
-    <None Remove="Data\**" />
     <None Remove="Image\**" />
     <None Remove="latest.zip" />
   </ItemGroup>
@@ -74,10 +71,6 @@
       <HintPath>$(AppData)\XIVLauncher\addon\Hooks\dev\Newtonsoft.Json.dll</HintPath>
       <Private>False</Private>
     </Reference>
-  </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="UI\" />
   </ItemGroup>
 
 </Project>
