@@ -167,7 +167,7 @@ public unsafe class Trade
             // 显示当前交易对象的记录
             ImGui.SameLine();
             if (ImGuiComponents.IconButton(FontAwesomeIcon.History)) {
-                _cashier.PluginUi.History.Show(Target.WorldName + "@" + Target.PlayerName);
+                _cashier.PluginUi.History.Show($"{Target.PlayerName}@{Target.WorldName}");
             }
             if (ImGui.IsItemHovered()) {
                 ImGui.SetTooltip("显示当前交易对象的交易记录");
@@ -296,7 +296,7 @@ public unsafe class Trade
         var recordList = _tradeItemList.Select(i => i.Convert().ToArray()).ToArray();
         var list = _tradeItemList.Select(i => i.Where(j => j.Id != 0).ToArray()).ToArray();
 
-        _cashier.PluginUi.History.AddHistory(status, $"{Target.WorldName}@{Target.PlayerName}", _tradeGil, _tradeItemList);
+        _cashier.PluginUi.History.AddHistory(status, $"{Target.PlayerName}@{Target.WorldName}", _tradeGil, list);
 
         if (LastTarget != Target) {
             multiGil = [0, 0];
@@ -351,16 +351,18 @@ public unsafe class Trade
     /// <param name="items">交易物品</param>
     /// <param name="gil">交易金币</param>
     /// <returns></returns>
-    private static SeStringBuilder BuildTradeSeString(DalamudLinkPayload payload, bool status, TradeTarget target, TradeItem[][] items, uint[] gil)
+    private static SeStringBuilder BuildTradeSeString(DalamudLinkPayload? payload, bool status, TradeTarget target, TradeItem[][] items, uint[] gil)
     {
         if (items.Length == 0 || gil.Length == 0) {
             return new SeStringBuilder().AddText($"[{Cashier.PluginName}]").AddUiForeground("获取交易内容失败", 17);
         }
         var builder = new SeStringBuilder()
             .AddUiForeground($"[{Cashier.PluginName}]", 45)
-            .AddText(SeIconChar.ArrowRight.ToIconString())
-            .Add(payload)
-            .AddUiForeground(1)
+            .AddText(SeIconChar.ArrowRight.ToIconString());
+        if (payload is not null) {
+            builder = builder.Add(payload);
+        }
+        builder = builder.AddUiForeground(1)
             .Add(new PlayerPayload(target.PlayerName!, (uint)target.WorldId!))
             .AddUiForegroundOff();
         if (target.WorldId != Svc.ClientState.LocalPlayer?.HomeWorld.Id) {
@@ -503,9 +505,9 @@ public unsafe class Trade
     /// <param name="str"></param>
     public void OnTradeTargetClick(uint commandId, SeString str)
     {
-        PlayerPayload? payload = (PlayerPayload?)str.Payloads.Find(i => i.Type == PayloadType.Player);
+        var payload = (PlayerPayload?)str.Payloads.Find(i => i.Type == PayloadType.Player);
         if (payload != null) {
-            _cashier.PluginUi.History.Show(payload.World.Name.RawString + "@" + payload.PlayerName);
+            _cashier.PluginUi.History.Show(payload.PlayerName + "@" + payload.World.Name.RawString);
         } else {
             Chat.PrintError("未找到交易对象");
             Svc.PluginLog.Verbose($"未找到交易对象，data=[{str.ToJson()}]");
@@ -535,6 +537,7 @@ public unsafe class Trade
         }
         IsTrading = false;
         _refreshTimer.Stop();
+        _cashier.PluginUi.Main.Get<SendMoney>()?.OnTradeCancelled();
         Finish(false);
     }
 
