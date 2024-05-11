@@ -62,22 +62,22 @@ namespace Cashier
             try {
                 Trade?.Draw();// 有问题
             } catch (Exception e) {
-                Svc.PluginLog.Warning("TradeDraw出错" + e);
+                Svc.PluginLog.Warning("TradeDraw出错\n" + e);
             }
             try {
                 Main?.Draw();
             } catch (Exception e) {
-                Svc.PluginLog.Warning("Main出错" + e);
+                Svc.PluginLog.Warning("Main出错\n" + e);
             }
             try {
                 History?.Draw();
             } catch (Exception e) {
-                Svc.PluginLog.Warning("HistoryDraw出错" + e);
+                Svc.PluginLog.Warning("HistoryDraw出错\n" + e);
             }
             try {
                 Setting?.Draw();
             } catch (Exception e) {
-                Svc.PluginLog.Warning("SettingDraw出错" + e);
+                Svc.PluginLog.Warning("SettingDraw出错\n" + e);
             }
         }
 

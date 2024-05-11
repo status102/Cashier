@@ -19,12 +19,6 @@ namespace Cashier
         public bool ShowTradeWindow = true;
 
         /// <summary>
-        /// 结账的步进值
-        /// </summary>
-        public int TradeStepping_1 = 10;
-        public int TradeStepping_2 = 50;
-
-        /// <summary>
         /// 交易结束时是否在聊天框通知
         /// </summary>
         public bool TradeNotify = true;
