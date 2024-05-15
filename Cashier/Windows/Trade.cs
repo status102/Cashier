@@ -136,7 +136,10 @@ public unsafe class Trade
         if (ImGui.Begin("玩家交易", ref _onceVisible, ImGuiWindowFlags.NoCollapse | ImGuiWindowFlags.NoScrollbar)) {
             ImGui.TextUnformatted("<--    ");
             ImGui.SameLine();
-            ImGui.TextUnformatted(_tradePlayerConfirm[0] ? "√" : string.Empty);
+
+            ImGui.PushFont(UiBuilder.IconFont);
+            ImGui.TextUnformatted(_tradePlayerConfirm[0] ? FontAwesomeIcon.Check.ToIconString() : string.Empty);
+            ImGui.PopFont();
 
             ImGui.SameLine(ImGui.GetColumnWidth() - 90);
             ImGui.TextDisabled("(?)");
@@ -184,7 +187,9 @@ public unsafe class Trade
 
             ImGui.TextUnformatted($"{Target.PlayerName} @ {Target.WorldName} -->    ");
             ImGui.SameLine();
-            ImGui.TextUnformatted(_tradePlayerConfirm[1] ? "√" : string.Empty);
+            ImGui.PushFont(UiBuilder.IconFont);
+            ImGui.TextUnformatted(_tradePlayerConfirm[0] ? FontAwesomeIcon.Check.ToIconString() : string.Empty);
+            ImGui.PopFont();
             DrawTradeTable(_tradeItemList[1], _tradeGil[1]);
             ImGui.End();
         }

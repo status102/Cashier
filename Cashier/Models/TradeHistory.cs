@@ -11,7 +11,7 @@ public class TradeHistory
     private const string TIME_FORMAT = "yyyy-MM-dd HH:mm:ss";
     private const char PART_SPLIT = ';';
     private const char ITEM_SPLIT = ',';
-    private const char COUNT_SPLIT = 'x';
+    public const char COUNT_SPLIT = 'x';
 
     public string Time { get; init; } = DateTime.Now.ToString(TIME_FORMAT);
     /// <summary>
@@ -60,7 +60,6 @@ public class TradeHistory
 
 public class HistoryItem
 {
-    private const char COUNT_SPLIT = 'x';
     public string Name { get; init; }
     public int Count { get; init; }
     private bool Quality { get; init; } = false;
@@ -90,6 +89,6 @@ public class HistoryItem
         Quality = quality;
         Icon = PluginUI.GetIcon(iconId, quality);
     }
-    public override string ToString() => $"{Name.Replace(SeIconChar.HighQuality.ToIconString(), "HQ")}{COUNT_SPLIT}{Count}";
-    public string ToShowString() => $"{Name} {COUNT_SPLIT} {Count}";
+    public override string ToString() => $"{Name.Replace(SeIconChar.HighQuality.ToIconString(), "HQ")}{TradeHistory.COUNT_SPLIT}{Count}";
+    public string ToShowString() => $"{Name} {TradeHistory.COUNT_SPLIT} {Count}";
 }
