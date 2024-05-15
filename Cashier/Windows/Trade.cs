@@ -92,7 +92,7 @@ public unsafe class Trade
         _cashier.HookHelper.OnTradeBegined += OnTradeBegined;
         _cashier.HookHelper.OnTradeFinished += OnTradeFinished;
         _cashier.HookHelper.OnTradeCanceled += OnTradeCancelled;
-        _cashier.HookHelper.OnTradeConfirmChanged -= OnTradePreCheckChanged;
+        _cashier.HookHelper.OnTradeConfirmChanged += OnTradePreCheckChanged;
         _cashier.HookHelper.OnTradeFinalCheck += OnTradeFinalChecked;
         _cashier.HookHelper.OnTradeMoneyChanged += OnTradeMoneyChanged;
         _cashier.HookHelper.OnSetTradeItemSlot += OnSetTradeSlotItem;
