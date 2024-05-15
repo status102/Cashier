@@ -167,14 +167,22 @@ public sealed class SendMoney : TabConfigBase, ITabPage
             ImGui.BeginDisabled();
         }
 
-        if (!ImGui.Checkbox(p.FullName, ref hasPlan)) {
+        if (!ImGui.Checkbox($"##{p.FullName}-CheckBox", ref hasPlan)) {
         } else if (hasPlan) {
             _editPlan.Add(p.ObjectId, (int)(_allMoney * 10000));
         } else {
             _editPlan.Remove(p.ObjectId);
         }
-        if (hasPlan) {
+
+        if (_isRunning) {
+            ImGui.EndDisabled();
+        }
+
+        ImGui.SameLine();
+        ImGui.Text(p.FullName);
             ImGui.SameLine(_nameLength + 60);
+        if (!hasPlan) {
+        } else if (!_isRunning) {
             ImGui.SetNextItemWidth(80);
             double value = _editPlan.TryGetValue(p.ObjectId, out int valueToken) ? valueToken / 10000.0 : 0;
             ImGui.InputDouble($"w##{p.ObjectId}Money", ref value, 0, 0, "%.1f", ImGuiInputTextFlags.CharsDecimal);
@@ -199,15 +207,12 @@ public sealed class SendMoney : TabConfigBase, ITabPage
             if (ImGui.Button($"归0##{p.ObjectId}0")) {
                 _editPlan[p.ObjectId] = 0;
             }
-
-            if (_isRunning) {
-                ImGui.EndDisabled();
+        } else {
                 // 运行中
-                ImGui.SameLine();
                 _change = _tradePlan.TryGetValue(p.ObjectId, out var valueToken2) ? valueToken2 : 0;
                 ImGui.Text($"剩余: {_change:#,0}");
             }
-        }
+
         ImGui.PopID();
     }
 
@@ -224,6 +229,7 @@ public sealed class SendMoney : TabConfigBase, ITabPage
     {
         _isRunning = false;
         _selectPlayerTimer.Stop();
+        TaskManager.Abort();
         _tradePlan.Clear();
         _lastTradeObjectId = default;
     }
@@ -269,13 +275,14 @@ public sealed class SendMoney : TabConfigBase, ITabPage
         TaskManager.Abort();
         _lastTradeObjectId = Trade.Target.ObjectId;
         //lock (_lock) {
-        if (_tradePlan.TryGetValue(_lastTradeObjectId, out var value)) {
+        if (!_tradePlan.TryGetValue(_lastTradeObjectId, out var value)) {
+            TaskManager.DelayNext(RandomDelay);
+            TaskManager.Enqueue(AddonTradeHelper.Cancel);
+        } else {
             TaskManager.DelayNext(RandomDelay);
             TaskManager.Enqueue(() => SetGil(value >= Maximum_Gil_Per_Times ? Maximum_Gil_Per_Times : (uint)value));
             TaskManager.DelayNext(RandomDelay);
             TaskManager.Enqueue(AddonTradeHelper.Step.PreCheck);
-        } else {
-            AddonTradeHelper.Cancel();
         }
         //}
     }
@@ -286,7 +293,8 @@ public sealed class SendMoney : TabConfigBase, ITabPage
             return;
         }
         if (!_tradePlan.TryGetValue(objectId, out var value)) {
-            AddonTradeHelper.Cancel();
+            TaskManager.DelayNext(RandomDelay);
+            TaskManager.Enqueue(AddonTradeHelper.Cancel);
         } else if (money <= value) {
             TaskManager.DelayNext(RandomDelay);
             TaskManager.Enqueue(AddonTradeHelper.Step.PreCheck);
