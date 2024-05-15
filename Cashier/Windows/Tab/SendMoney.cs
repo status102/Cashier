@@ -245,13 +245,13 @@ public sealed class SendMoney : TabConfigBase, ITabPage
 
     private unsafe void AddTargetPlayer()
     {
-        var target = Svc.ObjectTable.SearchById(TargetSystem.Instance()->GetCurrentTarget()->ObjectID);
-        if (target is Character { ObjectKind: ObjectKind.Player } player) {
+        var target = TargetSystem.Instance()->GetCurrentTarget();
+        if (target is not null && Svc.ObjectTable.SearchById(target->ObjectID) is Character { ObjectKind: ObjectKind.Player } player) {
             if (_memberList.Any(p => p.ObjectId == player.ObjectId)) {
                 return;
             }
             _memberList.Add(new(player));
-            _editPlan.TryAdd(target.ObjectId, 0);
+            _editPlan.TryAdd(player.ObjectId, 0);
             _nameLength = Math.Max((int)ImGui.CalcTextSize("全体: ").X, _memberList.Select(p => (int)ImGui.CalcTextSize(p.FullName).X).Append(0).Max());
         }
     }
