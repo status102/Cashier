@@ -188,7 +188,7 @@ public unsafe class Trade
             ImGui.TextUnformatted($"{Target.PlayerName} @ {Target.WorldName} -->    ");
             ImGui.SameLine();
             ImGui.PushFont(UiBuilder.IconFont);
-            ImGui.TextUnformatted(_tradePlayerConfirm[0] ? FontAwesomeIcon.Check.ToIconString() : string.Empty);
+            ImGui.TextUnformatted(_tradePlayerConfirm[1] ? FontAwesomeIcon.Check.ToIconString() : string.Empty);
             ImGui.PopFont();
             DrawTradeTable(_tradeItemList[1], _tradeGil[1]);
             ImGui.End();
