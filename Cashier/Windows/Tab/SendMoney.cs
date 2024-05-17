@@ -4,6 +4,7 @@ using Dalamud.Game.Addon.Lifecycle;
 using Dalamud.Game.Addon.Lifecycle.AddonArgTypes;
 using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Game.ClientState.Objects.Types;
+using Dalamud.Interface.Utility;
 using ECommons.Automation;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.Control;
@@ -18,11 +19,11 @@ using System.Timers;
 namespace Cashier.Windows.Tab;
 public sealed class SendMoney : TabConfigBase, ITabPage
 {
-    public string TabName { get; } = "老板队自动结账";
+    public string TabName { get; } = "自动打钱";
     public bool Hide { get; }
     private readonly Cashier _cashier;
     private Trade Trade => _cashier.PluginUi.Trade;
-    private new Configuration Config;
+    private readonly new Configuration Config;
     private static TaskManager TaskManager => Cashier.TaskManager!;
     private int RandomDelay => Random.Next(200, 500);
     private readonly Random Random = new(DateTime.Now.Millisecond);
@@ -34,13 +35,13 @@ public sealed class SendMoney : TabConfigBase, ITabPage
 
     private int[] MoneyButton = [-50, -10, 10, 50];
 
-    private Dictionary<uint, int> _editPlan = [];
-    private Dictionary<uint, int> _tradePlan = [];
+    private Dictionary<uint, long> _editPlan = [];
+    private Dictionary<uint, long> _tradePlan = [];
     private List<Member> _memberList = [];
     private bool _enhance = true;
     private bool _isRunning = false;
     private double _allMoney;
-    private int _change;
+    private long _change;
     private uint _lastTradeObjectId;
     private float _nameLength;
 
@@ -99,14 +100,14 @@ public sealed class SendMoney : TabConfigBase, ITabPage
 
         ImGui.SameLine();
         int value = Config.TradeStepping_1;
-        ImGui.SetNextItemWidth(70);
+        ImGui.SetNextItemWidth(50 * ImGuiHelpers.GlobalScale);
         if (ImGui.InputInt("步进1", ref value, 0, 0, ImGuiInputTextFlags.CharsDecimal)) {
             Config.TradeStepping_1 = value;
         }
 
         ImGui.SameLine();
         value = Config.TradeStepping_2;
-        ImGui.SetNextItemWidth(70);
+        ImGui.SetNextItemWidth(50 * ImGuiHelpers.GlobalScale);
         if (ImGui.InputInt("步进2", ref value, 0, 0, ImGuiInputTextFlags.CharsDecimal)) {
             Config.TradeStepping_2 = value;
         }
@@ -116,15 +117,12 @@ public sealed class SendMoney : TabConfigBase, ITabPage
     {
         ImGui.Text("全体: ");
 
-        if (_isRunning) {
-            ImGui.BeginDisabled();
-        }
-
+        ImGui.BeginDisabled(_isRunning);
         ImGui.SameLine(_nameLength + 60);
         ImGui.SetNextItemWidth(80);
-        ImGui.InputDouble($"w##AllMoney", ref _allMoney, 0, 0, "%.1f", ImGuiInputTextFlags.CharsDecimal);
+        ImGui.InputDouble($"w##AllMoney", ref _allMoney, 0, 0, "%.1lf", ImGuiInputTextFlags.CharsDecimal);
         if (ImGui.IsItemDeactivatedAfterEdit()) {
-            _editPlan.Keys.ToList().ForEach(key => _editPlan[key] = (int)(_allMoney * 10000));
+            _editPlan.Keys.ToList().ForEach(key => _editPlan[key] = (long)(_allMoney * 10000));
         }
 
         _change = 0;
@@ -153,39 +151,32 @@ public sealed class SendMoney : TabConfigBase, ITabPage
             };
         }
 
-        if (_isRunning) {
-            ImGui.EndDisabled();
-        }
+        ImGui.EndDisabled();
     }
 
     private void DrawPersonalSetting(Member p)
     {
         ImGui.PushID(p.ObjectId.ToString());
+        ImGui.BeginGroup();
         var hasPlan = _editPlan.ContainsKey(p.ObjectId);
 
-        if (_isRunning) {
-            ImGui.BeginDisabled();
-        }
-
+        ImGui.BeginDisabled(_isRunning);
         if (!ImGui.Checkbox($"##{p.FullName}-CheckBox", ref hasPlan)) {
         } else if (hasPlan) {
             _editPlan.Add(p.ObjectId, (int)(_allMoney * 10000));
         } else {
             _editPlan.Remove(p.ObjectId);
         }
-
-        if (_isRunning) {
-            ImGui.EndDisabled();
-        }
+        ImGui.EndDisabled();
 
         ImGui.SameLine();
         ImGui.Text(p.FullName);
-            ImGui.SameLine(_nameLength + 60);
+        ImGui.SameLine(_nameLength + 60);
         if (!hasPlan) {
         } else if (!_isRunning) {
             ImGui.SetNextItemWidth(80);
-            double value = _editPlan.TryGetValue(p.ObjectId, out int valueToken) ? valueToken / 10000.0 : 0;
-            ImGui.InputDouble($"w##{p.ObjectId}Money", ref value, 0, 0, "%.1f", ImGuiInputTextFlags.CharsDecimal);
+            var value = _editPlan.TryGetValue(p.ObjectId, out var valueToken) ? valueToken / 10000.0 : 0;
+            ImGui.InputDouble($"w##{p.ObjectId}-Money", ref value, 0, 0, "%.1lf", ImGuiInputTextFlags.CharsDecimal);
             if (ImGui.IsItemDeactivatedAfterEdit()) {
                 _editPlan[p.ObjectId] = (int)(value * 10000);
             }
@@ -208,13 +199,14 @@ public sealed class SendMoney : TabConfigBase, ITabPage
                 _editPlan[p.ObjectId] = 0;
             }
         } else {
-                // 运行中
-                _change = _tradePlan.TryGetValue(p.ObjectId, out var valueToken2) ? valueToken2 : 0;
-                ImGui.Text($"剩余: {_change:#,0}");
-            }
-
+            // 运行中
+            _change = _tradePlan.TryGetValue(p.ObjectId, out var valueToken2) ? valueToken2 : 0;
+            ImGui.Text($"剩余: {_change:#,0}");
+        }
+        ImGui.EndGroup();
         ImGui.PopID();
     }
+    #endregion
 
     private void Start()
     {
@@ -261,7 +253,6 @@ public sealed class SendMoney : TabConfigBase, ITabPage
             _nameLength = Math.Max((int)ImGui.CalcTextSize("全体: ").X, _memberList.Select(p => (int)ImGui.CalcTextSize(p.FullName).X).Append(0).Max());
         }
     }
-    #endregion
 
     /// <summary>
     /// 显示交易窗口后设置金额
@@ -388,54 +379,52 @@ public sealed class SendMoney : TabConfigBase, ITabPage
                 TaskManager.Enqueue(() => RequestTrade(id));
             });
     }
-}
 
-
-
-[Serializable]
-class Configuration : TabConfig
-{
-    private int _tradeStepping_1 = 10;
-
-    /// <summary>
-    /// 结账的步进值
-    /// </summary>
-    [JsonProperty("trade_stepping_1")]
-    public int TradeStepping_1
+    [Serializable]
+    class Configuration : TabConfig
     {
-        get => _tradeStepping_1;
-        set => SetAndNotify(ref _tradeStepping_1, value);
+        private int _tradeStepping_1 = 10;
+
+        /// <summary>
+        /// 结账的步进值
+        /// </summary>
+        [JsonProperty("trade_stepping_1")]
+        public int TradeStepping_1
+        {
+            get => _tradeStepping_1;
+            set => SetAndNotify(ref _tradeStepping_1, value);
+        }
+
+        private int _tradeStepping_2 = 50;
+        [JsonProperty("trade_stepping_2")]
+        public int TradeStepping_2
+        {
+            get => _tradeStepping_2;
+            set => SetAndNotify(ref _tradeStepping_2, value);
+        }
     }
 
-    private int _tradeStepping_2 = 50;
-    [JsonProperty("trade_stepping_2")]
-    public int TradeStepping_2
+    class Member
     {
-        get => _tradeStepping_2;
-        set => SetAndNotify(ref _tradeStepping_2, value);
+        public uint ObjectId;
+        public string FirstName = null!;
+        public string World = null!;
+
+        public Member(TeamHelper.TeamMember teamMember)
+        {
+            ObjectId = teamMember.ObjectId;
+            FirstName = teamMember.FirstName;
+            World = teamMember.World;
+        }
+
+        public unsafe Member(Character gameObject)
+        {
+            ObjectId = gameObject.ObjectId;
+            FirstName = gameObject.Name.TextValue;
+            var worldId = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)gameObject.Address)->HomeWorld;
+            World = Svc.DataManager.GetExcelSheet<World>()?.FirstOrDefault(x => x.RowId == worldId)?.Name ?? "???";
+        }
+
+        public string FullName => $"{FirstName}@{World}";
     }
-}
-
-class Member
-{
-    public uint ObjectId;
-    public string FirstName = null!;
-    public string World = null!;
-
-    public Member(TeamHelper.TeamMember teamMember)
-    {
-        ObjectId = teamMember.ObjectId;
-        FirstName = teamMember.FirstName;
-        World = teamMember.World;
-    }
-
-    public unsafe Member(Character gameObject)
-    {
-        ObjectId = gameObject.ObjectId;
-        FirstName = gameObject.Name.TextValue;
-        var worldId = ((FFXIVClientStructs.FFXIV.Client.Game.Character.Character*)gameObject.Address)->HomeWorld;
-        World = Svc.DataManager.GetExcelSheet<World>()?.FirstOrDefault(x => x.RowId == worldId)?.Name ?? "???";
-    }
-
-    public string FullName => $"{this.FirstName}@{this.World}";
 }

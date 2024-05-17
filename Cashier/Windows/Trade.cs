@@ -27,7 +27,7 @@ public unsafe class Trade
 {
     private readonly Cashier _cashier;
     private Configuration Config => _cashier.Config;
-    private readonly DalamudLinkPayload _payload;
+    private readonly DalamudLinkPayload? _payload;
     /// <summary>
     /// 窗口大小
     /// </summary>
@@ -53,7 +53,7 @@ public unsafe class Trade
     /// <summary>
     /// 交易物品记录，0自己，1对面
     /// </summary>
-    private TradeItem[][] _tradeItemList = new TradeItem[2][];
+    private TradeItem[][] _tradeItemList = [[new(), new(), new(), new(), new()], [new(), new(), new(), new(), new()]];
     private bool[] _tradePlayerConfirm = new bool[2];
     /// <summary>
     /// 交易金币记录，0自己，1对面
@@ -79,7 +79,9 @@ public unsafe class Trade
     public Trade(Cashier cashier)
     {
         _cashier = cashier;
-        _payload = cashier.PluginInterface.AddChatLinkHandler(0, OnTradeTargetClick);
+        try {
+            _payload = cashier.PluginInterface.AddChatLinkHandler(0, OnTradeTargetClick);
+        } catch (Exception) { }
 
         agentTradePtr = (nint)AgentModule.Instance()->GetAgentByInternalId(AgentId.Trade);
         Svc.AddonLifecycle.RegisterListener(AddonEvent.PostSetup, "Trade", (_, args) =>
@@ -422,7 +424,7 @@ public unsafe class Trade
     /// <param name="multiItems">累积交易物品</param>
     /// <param name="multiGil">累积交易金币</param>
     /// <returns></returns>
-    private static SeStringBuilder BuildMultiTradeSeString(DalamudLinkPayload payload, bool status, TradeTarget target, TradeItem[][] items, uint[] gil, Dictionary<uint, RecordItem>[] multiItems, uint[] multiGil)
+    private static SeStringBuilder BuildMultiTradeSeString(DalamudLinkPayload? payload, bool status, TradeTarget target, TradeItem[][] items, uint[] gil, Dictionary<uint, RecordItem>[] multiItems, uint[] multiGil)
     {
         if (items.Length == 0 || gil.Length != 2 || multiItems.Length == 0 || multiGil.Length != 2) {
             return new SeStringBuilder()
@@ -672,8 +674,8 @@ public unsafe class Trade
         if (objectId == Svc.ClientState.LocalPlayer!.ObjectId) {
             _tradePlayerConfirm[0] = confirmed;
         } else {
-            _cashier.PluginUi.Main.Get<SendMoney>()?.OnTradePreCheckChanged(Target.ObjectId, confirmed, _tradeGil[0]);
             _tradePlayerConfirm[1] = confirmed;
+            _cashier.PluginUi.Main.Get<SendMoney>()?.OnTradePreCheckChanged(Target.ObjectId, confirmed, _tradeGil[0]);
         }
     }
 }
