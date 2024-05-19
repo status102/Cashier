@@ -21,14 +21,12 @@ public abstract class TabConfigBase
 }
 
 [Serializable]
-public class TabConfig : INotifyPropertyChanged
+public class TabConfig : NotifyPropertyChangedBase, INotifyPropertyChanged
 {
     #region Init and Save
     [NonSerialized]
     private string _path = string.Empty;
     //private DalamudPluginInterface? pluginInterface;
-
-    public event PropertyChangedEventHandler? PropertyChanged;
 
     public static T LoadConfig<T>(string path, string pluginName) where T : TabConfig
     {
@@ -43,20 +41,12 @@ public class TabConfig : INotifyPropertyChanged
             Svc.PluginLog.Warning(e.ToString());
         }
 
-        var config = JsonConvert.DeserializeObject<T>(configStr);
+        T? config = JsonConvert.DeserializeObject<T>(configStr);
         config ??= (T)new TabConfig();
         config._path = _path;
         config.PropertyChanged += config.Configuration_PropertyChanged;
 
         return config;
-    }
-
-    protected void SetAndNotify<T>(ref T field, T value, [CallerMemberName] string propertyName = "")
-    {
-        if (!EqualityComparer<T>.Default.Equals(field, value)) {
-            field = value;
-            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
-        }
     }
 
     private void Configuration_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -66,11 +56,14 @@ public class TabConfig : INotifyPropertyChanged
 
     public void Save()
     {
+        if (string.IsNullOrEmpty(_path)) {
+            return;
+        }
         try {
             if (!Directory.Exists(Path.GetDirectoryName(_path))) {
                 Directory.CreateDirectory(Path.GetDirectoryName(_path)!);
             }
-            using FileStream stream = File.Open(_path, FileMode.OpenOrCreate);
+            using FileStream stream = File.Open(_path, FileMode.Create);
             StreamWriter writer = new(stream);
             writer.WriteLine(JsonConvert.SerializeObject(this));
             writer.Flush();
@@ -81,3 +74,17 @@ public class TabConfig : INotifyPropertyChanged
     #endregion
 }
 
+public abstract class NotifyPropertyChangedBase : INotifyPropertyChanged
+{
+    public event PropertyChangedEventHandler? PropertyChanged;
+
+    protected virtual bool SetAndNotify<T>(ref T field, T value, [CallerMemberName] string propertyName = "")
+    {
+        if (!EqualityComparer<T>.Default.Equals(field, value)) {
+            field = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+            return true;
+        }
+        return false;
+    }
+}
