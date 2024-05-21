@@ -1,5 +1,6 @@
 ﻿using Cashier.Commons;
 using Cashier.Model;
+using Cashier.Models;
 using Dalamud.Interface.ImGuiFileDialog;
 using ImGuiNET;
 using System;
@@ -192,7 +193,12 @@ public sealed class History : IWindow
         }
     }
 
-    public void AddHistory(bool status, string target, uint[] gil, TradeItem[][] items)
+    private void AddHistory(TradeTarget target, bool success, uint[] gil, TradeItem[][] items)
+    {
+        AddHistory(success, $"{target.PlayerName}@{target.WorldName}", gil, items);
+    }
+
+    private void AddHistory(bool status, string target, uint[] gil, TradeItem[][] items)
     {
         var giveList = items[0].Select(i => new HistoryItem(i)).ToArray();
         var receiviList = items[1].Select(i => new HistoryItem(i)).ToArray();
@@ -303,10 +309,12 @@ public sealed class History : IWindow
     public History(Cashier cashier)
     {
         _cashier = cashier;
-        Task.Run(() => ReadHistory());
+        _cashier.PluginUi.Trade.OnTradeFinishedOutput += AddHistory;
+        Task.Run(ReadHistory);
     }
     public void Dispose()
     {
+        _cashier.PluginUi.Trade.OnTradeFinishedOutput -= AddHistory;
         if (isHistoryChanged) {
             SaveHistory();
         }

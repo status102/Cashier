@@ -12,10 +12,9 @@ public sealed class HookHelper : IDisposable
     private Trade? Trade => _cashier.PluginUi?.Trade;
     private bool _isDisposed;
 
-    public delegate void SetTradeTarget(nint objectId);
-    public SetTradeTarget? OnSetTradeTarget;
+    public delegate void TradeBegined(nint objectId);
+    public TradeBegined? OnTradeBegined;
     public delegate void TradeEvent();
-    public TradeEvent? OnTradeBegined;
     public TradeEvent? OnTradeFinished;
     public TradeEvent? OnTradeCanceled;
     public TradeEvent? OnTradeFinalCheck;
@@ -42,6 +41,7 @@ public sealed class HookHelper : IDisposable
         _tradeMyMoney?.Enable();
         _tradeOtherMoney?.Enable();
         //_tradeCountHook?.Enable();
+        //_executeCommandHook?.Enable();
     }
 
     public void Dispose()
@@ -60,6 +60,7 @@ public sealed class HookHelper : IDisposable
         _tradeMyMoney?.Dispose();
         _tradeOtherMoney?.Dispose();
         _tradeCountHook?.Dispose();
+        _executeCommandHook?.Dispose();
     }
 
 
@@ -95,8 +96,11 @@ public sealed class HookHelper : IDisposable
         // 正常0
         // 对无法发起交易的对象、超距，2 ||(48|1310) 无法向“忙碌中”状态的玩家申请交易。| 距离太远。
         // 现在无法进行交易，19 || /(无法战斗|制作|采集)状态下无法进行该操作。/
-        OnSetTradeTarget?.Invoke(objectId);
-        return _tradeRequestHook!.Original(a1, objectId);
+        var result = _tradeRequestHook!.Original(a1, objectId);
+        if (result == 0) {
+            OnTradeBegined?.Invoke(objectId);
+        }
+        return result;
     }
 
     [Signature("4C 8B DC 53 55 48 81 EC 68 01 00 00 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 40 01 00 00", DetourName = nameof(DetourTradeStatusUpdate))]
@@ -111,12 +115,11 @@ public sealed class HookHelper : IDisposable
         switch (Marshal.ReadByte(a3 + 4)) {
             case 1:
                 // 别人交易你
-                OnSetTradeTarget?.Invoke(Marshal.ReadInt32(a3 + 40));
-                OnTradeBegined?.Invoke();
+                OnTradeBegined?.Invoke(Marshal.ReadInt32(a3 + 40));
                 break;
             case 2:
                 // 发起交易
-                OnTradeBegined?.Invoke();
+                //OnTradeBegined?.Invoke();
                 break;
             case 16:
                 // 交易状态更新
@@ -199,7 +202,7 @@ public sealed class HookHelper : IDisposable
     }
 
     [Signature("3B 51 08 7D ?? 48 8B 41 20 48 63 D2 44 39 04 90", DetourName = nameof(DetourTradeCount))]
-    private Hook<TradeCount>? _tradeCountHook;
+    private readonly Hook<TradeCount>? _tradeCountHook;
     private delegate void TradeCount(nint a1, int a2, int a3);
     private void DetourTradeCount(nint a1, int a2, int a3)
     {
@@ -207,6 +210,16 @@ public sealed class HookHelper : IDisposable
         Svc.PluginLog.Information($"交易 物品槽 数量: {a1:X}, {a2:X}, {a3}");
 #endif
         _tradeCountHook!.Original(a1, a2, a3);
+    }
+
+    private delegate nint ExecuteCommandDelegate(int command, int a2, int a3, int a4, int a5);
+
+    [Signature("48 89 5C 24 ?? 48 89 6C 24 ?? 48 89 74 24 ?? 57 48 81 EC ?? ?? ?? ?? 48 8B 05 ?? ?? ?? ?? 48 33 C4 48 89 84 24 ?? ?? ?? ?? 8B E9 41 8B D9 48 8B 0D ?? ?? ?? ?? 41 8B F8 8B F2", DetourName = nameof(DetourExecuteCommand))]
+    private readonly Hook<ExecuteCommandDelegate>? _executeCommandHook;
+    private nint DetourExecuteCommand(int command, int a2, int a3, int a4, int a5)
+    {
+        Svc.PluginLog.Debug($"ExecuteCommand: {command:X}, {a2:X}, {a3:X}, {a4:X}, {a5:X}");
+        return _executeCommandHook!.Original(command, a2, a3, a4, a5);
     }
     #endregion
 }

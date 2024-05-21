@@ -28,6 +28,8 @@ public unsafe class Trade
     private readonly Cashier _cashier;
     private Configuration Config => _cashier.Config;
     private readonly DalamudLinkPayload? _payload;
+    public delegate void TradeFinished(TradeTarget target, bool success, uint[] gil, TradeItem[][] item);
+    public TradeFinished? OnTradeFinishedOutput;
     /// <summary>
     /// 窗口大小
     /// </summary>
@@ -90,7 +92,6 @@ public unsafe class Trade
         });
         _refreshTimer.Elapsed += (_, __) => RefreshData();
 
-        _cashier.HookHelper.OnSetTradeTarget += OnSetTradeTarget;
         _cashier.HookHelper.OnTradeBegined += OnTradeBegined;
         _cashier.HookHelper.OnTradeFinished += OnTradeFinished;
         _cashier.HookHelper.OnTradeCanceled += OnTradeCancelled;
@@ -103,7 +104,6 @@ public unsafe class Trade
 
     public void Dispose()
     {
-        _cashier.HookHelper.OnSetTradeTarget -= OnSetTradeTarget;
         _cashier.HookHelper.OnTradeBegined -= OnTradeBegined;
         _cashier.HookHelper.OnTradeFinished -= OnTradeFinished;
         _cashier.HookHelper.OnTradeCanceled -= OnTradeCancelled;
@@ -302,8 +302,7 @@ public unsafe class Trade
     {
         var recordList = _tradeItemList.Select(i => i.Convert().ToArray()).ToArray();
         var list = _tradeItemList.Select(i => i.Where(j => j.Id != 0).ToArray()).ToArray();
-
-        _cashier.PluginUi.History.AddHistory(status, $"{Target.PlayerName}@{Target.WorldName}", _tradeGil, list);
+        OnTradeFinishedOutput?.Invoke(Target, status, _tradeGil, list);
 
         if (LastTarget != Target) {
             multiGil = [0, 0];
@@ -521,15 +520,23 @@ public unsafe class Trade
         }
     }
 
-    private void OnTradeBegined()
+    private void OnTradeBegined(nint objectId)
     {
         if (IsTrading) {
             // 上次交易未结束
             Svc.PluginLog.Warning("上次交易未结束时开始交易");
             return;
         }
+        Svc.PluginLog.Debug($"交易开始: {objectId:X}");
 
-        Svc.PluginLog.Debug("交易开始");
+        var ob = Svc.ObjectTable.FirstOrDefault(i => i.ObjectId == objectId);
+        if (ob is PlayerCharacter tradeTarget) {
+            var world = Svc.DataManager.GetExcelSheet<World>()?.FirstOrDefault(r => r.RowId == tradeTarget.HomeWorld.Id);
+            Target = new(tradeTarget.HomeWorld.Id, world?.Name ?? "???", (uint)objectId, tradeTarget.Name.TextValue);
+        } else {
+            Svc.PluginLog.Error($"交易开始，但找不到交易对象，id: {objectId:X}");
+            Target = new();
+        }
         IsTrading = true;
         Reset();
         _refreshTimer.Start();
@@ -569,25 +576,6 @@ public unsafe class Trade
             return;
         }
         _cashier.PluginUi.Main.Get<SendMoney>()?.OnTradeFinalChecked(Target.ObjectId, _tradeGil[0]);
-    }
-
-
-    /// <summary>
-    /// 设置交易目标
-    /// </summary>
-    /// <param name="objectId"></param>
-    private void OnSetTradeTarget(nint objectId)
-    {
-        var player = Svc.ObjectTable.FirstOrDefault(i => i.ObjectId == objectId) as PlayerCharacter;
-        if (player != null) {
-            if (player.ObjectId != Svc.ClientState.LocalPlayer?.ObjectId) {
-                var world = Svc.DataManager.GetExcelSheet<World>()?.FirstOrDefault(r => r.RowId == player.HomeWorld.Id);
-                Target = new(player.HomeWorld.Id, world?.Name ?? "???", (uint)objectId, player.Name.TextValue);
-            }
-        } else {
-            Svc.PluginLog.Error($"找不到交易对象，id: {objectId:X}");
-            Target = new();
-        }
     }
 
     public void RefreshData()
