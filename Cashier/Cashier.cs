@@ -100,22 +100,22 @@ public unsafe sealed class Cashier : IDalamudPlugin
         try {
             Trade?.Draw();// 有问题
         } catch (Exception e) {
-            Svc.PluginLog.Warning("Trade.Draw出错\n" + e);
+            Svc.Log.Warning("Trade.Draw出错\n" + e);
         }
         try {
             Main?.Draw();
         } catch (Exception e) {
-            Svc.PluginLog.Warning("Main.Draw出错\n" + e);
+            Svc.Log.Warning("Main.Draw出错\n" + e);
         }
         try {
             History?.Draw();
         } catch (Exception e) {
-            Svc.PluginLog.Warning("History.Draw出错\n" + e);
+            Svc.Log.Warning("History.Draw出错\n" + e);
         }
         try {
             Setting?.Draw();
         } catch (Exception e) {
-            Svc.PluginLog.Warning("Setting.Draw出错\n" + e);
+            Svc.Log.Warning("Setting.Draw出错\n" + e);
         }
     }
 

@@ -264,7 +264,7 @@ public sealed class History : IWindow
         if (Svc.ClientState.LocalPlayer == null) {
             return;
         }
-        Svc.PluginLog.Information($"[{Cashier.Name}]保存交易历史: {path}");
+        Svc.Log.Information($"[{Cashier.Name}]保存交易历史: {path}");
 
         var saveList = showList.Where(i => i.Visible).Select(i => new string[7] {
                     i.Time,
@@ -283,7 +283,7 @@ public sealed class History : IWindow
             saveList.ForEach(i => writer.WriteLine(string.Join(",", i.Select(str => $"\"{str}\"").ToList())));
             writer.Flush();
         } catch (IOException e) {
-            Svc.PluginLog.Error(e.ToString());
+            Svc.Log.Error(e.ToString());
         }
 
     }

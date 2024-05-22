@@ -43,11 +43,11 @@ namespace Cashier.Commons
 		public static bool TryClickContextMenuEntry(string text)
 		{
 			if (!GenericHelpers.TryGetAddonByName<AtkUnitBase>("ContextMenu", out var addon)) {
-				Svc.PluginLog.Error("获取ContextMenu失败");
+				Svc.Log.Error("获取ContextMenu失败");
 				return false;
 			}
 			if (!TryScanContextMenuText(addon, text, out var index)) {
-				Svc.PluginLog.Error($"ContextMenu内未找到包含[{text}]的选项，关闭ContextMenu");
+				Svc.Log.Error($"ContextMenu内未找到包含[{text}]的选项，关闭ContextMenu");
 				addon->FireCloseCallback();
 				addon->Close(true);
 				return false;
@@ -59,15 +59,15 @@ namespace Cashier.Commons
 		public static bool TryClickContextMenuIndex(int index)
 		{
 			if (!GenericHelpers.TryGetAddonByName<AtkUnitBase>("ContextMenu", out var addon)) {
-				Svc.PluginLog.Error("获取ContextMenu失败");
+				Svc.Log.Error("获取ContextMenu失败");
 				return false;
 			}
 			if (index < 0) {
-				Svc.PluginLog.Error("index不能小于0");
+				Svc.Log.Error("index不能小于0");
 				return false;
 			}
 			if (index >= addon->AtkValues[0].UInt) {
-				Svc.PluginLog.Error("index超出范围");
+				Svc.Log.Error("index超出范围");
 				return false;
 			}
 			Callback.Fire(addon, true, 0, index, 0U, 0, 0);

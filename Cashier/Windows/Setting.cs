@@ -120,7 +120,7 @@ namespace Cashier.Windows
                             Chat.PrintWarning($"从剪贴板导入{items.Count}个预设");
                         } catch (Exception e) {
                             Chat.PrintMsg("从剪贴板导入失败");
-                            Svc.PluginLog.Error("从剪贴板导入失败" + e.ToString());
+                            Svc.Log.Error("从剪贴板导入失败" + e.ToString());
                         }
                         Config.Save();
                     }

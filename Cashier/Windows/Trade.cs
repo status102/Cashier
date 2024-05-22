@@ -516,7 +516,7 @@ public unsafe class Trade
             _cashier.History.Show(payload.PlayerName + "@" + payload.World.Name.RawString);
         } else {
             Chat.PrintError("未找到交易对象");
-            Svc.PluginLog.Verbose($"未找到交易对象，data=[{str.ToJson()}]");
+            Svc.Log.Verbose($"未找到交易对象，data=[{str.ToJson()}]");
         }
     }
 
@@ -524,17 +524,17 @@ public unsafe class Trade
     {
         if (IsTrading) {
             // 上次交易未结束
-            Svc.PluginLog.Warning("上次交易未结束时开始交易");
+            Svc.Log.Warning("上次交易未结束时开始交易");
             return;
         }
-        Svc.PluginLog.Debug($"交易开始: {objectId:X}");
+        Svc.Log.Debug($"交易开始: {objectId:X}");
 
         var ob = Svc.ObjectTable.FirstOrDefault(i => i.ObjectId == objectId);
         if (ob is PlayerCharacter tradeTarget) {
             var world = Svc.DataManager.GetExcelSheet<World>()?.FirstOrDefault(r => r.RowId == tradeTarget.HomeWorld.Id);
             Target = new(tradeTarget.HomeWorld.Id, world?.Name ?? "???", (uint)objectId, tradeTarget.Name.TextValue);
         } else {
-            Svc.PluginLog.Error($"交易开始，但找不到交易对象，id: {objectId:X}");
+            Svc.Log.Error($"交易开始，但找不到交易对象，id: {objectId:X}");
             Target = new();
         }
         IsTrading = true;
@@ -546,7 +546,7 @@ public unsafe class Trade
     {
         if (!IsTrading) {
             // 未开始交易
-            Svc.PluginLog.Warning("未开始交易时交易被取消");
+            Svc.Log.Warning("未开始交易时交易被取消");
             return;
         }
         IsTrading = false;
@@ -559,7 +559,7 @@ public unsafe class Trade
     {
         if (!IsTrading) {
             // 未开始交易
-            Svc.PluginLog.Warning("未开始交易时交易完成");
+            Svc.Log.Warning("未开始交易时交易完成");
             return;
         }
         IsTrading = false;
@@ -572,7 +572,7 @@ public unsafe class Trade
     {
         if (!IsTrading) {
             // 未开始交易
-            Svc.PluginLog.Warning("未开始交易时进入最终确认");
+            Svc.Log.Warning("未开始交易时进入最终确认");
             return;
         }
         _cashier.Main.Get<SendMoney>()?.OnTradeFinalChecked(Target.ObjectId, _tradeGil[0]);
@@ -597,7 +597,7 @@ public unsafe class Trade
                 }
                 return int.TryParse(countTextNode->NodeText.ToString(), out int result) ? result : -1;
             } catch (Exception e) {
-                Svc.PluginLog.Error($"获取交易物品数量失败, nodeId:{nodeId}\n" + e.Message);
+                Svc.Log.Error($"获取交易物品数量失败, nodeId:{nodeId}\n" + e.Message);
                 return -1;
             }
         }

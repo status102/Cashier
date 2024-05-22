@@ -25,7 +25,7 @@ namespace Cashier.Model
             var item = Svc.DataManager.GetExcelSheet<Item>()?.FirstOrDefault(r => r.RowId == id);
             if (item == null) {
                 Name = "???";
-                Svc.PluginLog.Warning($"获取物品信息错误: id={id}");
+                Svc.Log.Warning($"获取物品信息错误: id={id}");
             } else {
                 IconId = item.Icon;
                 Name = item.Name;

@@ -38,7 +38,7 @@ public class TabConfig : NotifyPropertyChangedBase, INotifyPropertyChanged
         } catch (FileNotFoundException) {
         } catch (DirectoryNotFoundException) {
         } catch (Exception e) {
-            Svc.PluginLog.Warning(e.ToString());
+            Svc.Log.Warning(e.ToString());
         }
 
         T? config = JsonConvert.DeserializeObject<T>(configStr);
@@ -68,7 +68,7 @@ public class TabConfig : NotifyPropertyChangedBase, INotifyPropertyChanged
             writer.WriteLine(JsonConvert.SerializeObject(this));
             writer.Flush();
         } catch (Exception e) {
-            Svc.PluginLog.Warning($"保存配置失败\npath={_path}\n" + e.ToString());
+            Svc.Log.Warning($"保存配置失败\npath={_path}\n" + e.ToString());
         }
     }
     #endregion

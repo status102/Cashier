@@ -109,7 +109,7 @@ public sealed class HookHelper : IDisposable
     {
         // a2 为ObjectId的交易对象，但是似乎源码都用的a3+40
 #if DEBUG
-        Svc.PluginLog.Debug($"交易状态: {a1:X}, {a2:X}, {a3:X}, {Marshal.ReadByte(a3 + 4)}");
+        Svc.Log.Debug($"交易状态: {a1:X}, {a2:X}, {a3:X}, {Marshal.ReadByte(a3 + 4)}");
 #endif
         switch (Marshal.ReadByte(a3 + 4)) {
             case 1:
@@ -124,7 +124,7 @@ public sealed class HookHelper : IDisposable
                 // 交易状态更新
                 var a3_5 = Marshal.ReadByte(a3 + 5);
 #if DEBUG
-                Svc.PluginLog.Debug($"交易状态0x10: {a1:X}, {a2:X}, {a3:X}, {a3_5}");
+                Svc.Log.Debug($"交易状态0x10: {a1:X}, {a2:X}, {a3:X}, {a3_5}");
 #endif
                 switch (a3_5) {
                     case 3:
@@ -152,7 +152,7 @@ public sealed class HookHelper : IDisposable
                 break;
             default:
 #if DEBUG
-                Svc.PluginLog.Debug($"交易状态: {a1:X}, {a2:X}, {a3:X}, {Marshal.ReadByte(a3 + 4)}");
+                Svc.Log.Debug($"交易状态: {a1:X}, {a2:X}, {a3:X}, {Marshal.ReadByte(a3 + 4)}");
 #endif
                 break;
         }
@@ -194,7 +194,7 @@ public sealed class HookHelper : IDisposable
     {
 #if DEBUG
         if (((Marshal.ReadByte(a3) & 0x0F) != 0x00) && Marshal.ReadInt32(a3 + 8) > 0) {
-            Svc.PluginLog.Debug($"格子数量设置: {a1:X}, a2:{a2:X}, a3:{a3}, a4:{a4}, count:{(uint)Marshal.ReadInt32(a3 + 8)}, a1+16:{a1 + 16:X}, a1+16+12:{a1 + 16 + 12:X}, *(a1+16):{Marshal.ReadInt64(a1 + 16):X}");
+            Svc.Log.Debug($"格子数量设置: {a1:X}, a2:{a2:X}, a3:{a3}, a4:{a4}, count:{(uint)Marshal.ReadInt32(a3 + 8)}, a1+16:{a1 + 16:X}, a1+16+12:{a1 + 16 + 12:X}, *(a1+16):{Marshal.ReadInt64(a1 + 16):X}");
         }
 #endif
         return _setSlotItemCount2Hook!.Original(a1, a2, a3, a4);
@@ -206,7 +206,7 @@ public sealed class HookHelper : IDisposable
     private void DetourTradeCount(nint a1, int a2, int a3)
     {
 #if DEBUG
-        Svc.PluginLog.Information($"交易 物品槽 数量: {a1:X}, {a2:X}, {a3}");
+        Svc.Log.Information($"交易 物品槽 数量: {a1:X}, {a2:X}, {a3}");
 #endif
         _tradeCountHook!.Original(a1, a2, a3);
     }
@@ -217,7 +217,7 @@ public sealed class HookHelper : IDisposable
     private readonly Hook<ExecuteCommandDelegate>? _executeCommandHook;
     private nint DetourExecuteCommand(int command, int a2, int a3, int a4, int a5)
     {
-        Svc.PluginLog.Debug($"ExecuteCommand: {command:X}, {a2:X}, {a3:X}, {a4:X}, {a5:X}");
+        Svc.Log.Debug($"ExecuteCommand: {command:X}, {a2:X}, {a3:X}, {a4:X}, {a5:X}");
         return _executeCommandHook!.Original(command, a2, a3, a4, a5);
     }
     #endregion

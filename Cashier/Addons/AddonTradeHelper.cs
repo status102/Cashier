@@ -26,18 +26,18 @@ public unsafe class AddonTradeHelper
     {
         var inventoryManager = InventoryManager.Instance();
         if (inventoryManager is null) {
-            Svc.PluginLog.Error("InventoryManager is null");
+            Svc.Log.Error("InventoryManager is null");
             return;
         }
         var foundType = InventoryTypes.Where(i => inventoryManager->GetItemCountInContainer(itemId, i) != 0).ToList();
         if (foundType.Count == 0) {
-            Svc.PluginLog.Error("背包里没找到");
+            Svc.Log.Error("背包里没找到");
             return;
         }
 
         var container = inventoryManager->GetInventoryContainer(foundType.First());
         if (container == null) {
-            Svc.PluginLog.Error("container获取失败");
+            Svc.Log.Error("container获取失败");
             return;
         }
 
@@ -50,14 +50,14 @@ public unsafe class AddonTradeHelper
             }
         }
         if (foundSlot == null) {
-            Svc.PluginLog.Error("foundSlot失败");
+            Svc.Log.Error("foundSlot失败");
             return;
         }
 
 
         var agentInventory = AgentModule.Instance()->GetAgentByInternalId(AgentId.Inventory);
         if (agentInventory == null) {
-            Svc.PluginLog.Error("背包获取失败");
+            Svc.Log.Error("背包获取失败");
             return;
         }
         AgentInventoryContext.Instance()->OpenForItemSlot(foundType.First(), (int)foundSlot, agentInventory->AddonId);
@@ -72,7 +72,7 @@ public unsafe class AddonTradeHelper
     {
         var agentInventory = AgentModule.Instance()->GetAgentByInternalId(AgentId.Inventory);
         if (agentInventory == null) {
-            Svc.PluginLog.Error("AgentModule.GetAgentByInternalId(AgentId.Inventory) is null");
+            Svc.Log.Error("AgentModule.GetAgentByInternalId(AgentId.Inventory) is null");
             return;
         }
         AgentInventoryContext.Instance()->OpenForItemSlot(type, slot, agentInventory->AddonId);
@@ -97,7 +97,7 @@ public unsafe class AddonTradeHelper
                 && IsDistanceEnough(x.Position)
                 && x.IsTargetable)?.Address ?? nint.Zero;
         if (objAddress == nint.Zero) {
-            Svc.PluginLog.Warning("找不到目标" + playerName);
+            Svc.Log.Warning("找不到目标" + playerName);
             return;
         }
         TargetSystem.Instance()->Target = (GameObject*)objAddress;
@@ -116,10 +116,10 @@ public unsafe class AddonTradeHelper
     {
         var gameObject = Svc.ObjectTable.SearchById(objectId);
         if (gameObject == null) {
-            Svc.PluginLog.Info($"找不到目标,id:{objectId:X}");
+            Svc.Log.Info($"找不到目标,id:{objectId:X}");
             return;
         } else if (!IsDistanceEnough(gameObject.Position)) {
-            Svc.PluginLog.Info($"距离过远,id:{objectId:X}");
+            Svc.Log.Info($"距离过远,id:{objectId:X}");
             return;
         }
         TargetSystem.Instance()->Target = (GameObject*)gameObject.Address;
@@ -148,7 +148,7 @@ public unsafe class AddonTradeHelper
     public static void Cancel()
     {
         if (!GenericHelpers.TryGetAddonByName<AtkUnitBase>("Trade", out var addon)) {
-            Svc.PluginLog.Error("Trade为空");
+            Svc.Log.Error("Trade为空");
         } else {
             Callback.Fire(addon, true, 1, 0);
         }
@@ -169,7 +169,7 @@ public unsafe class AddonTradeHelper
         public static void ClickMoney()
         {
             if (!GenericHelpers.TryGetAddonByName<AtkUnitBase>("Trade", out var tradeAddon)) {
-                Svc.PluginLog.Error("Trade为空");
+                Svc.Log.Error("Trade为空");
             } else {
                 Callback.Fire(tradeAddon, true, 2, 0);
             }
@@ -178,7 +178,7 @@ public unsafe class AddonTradeHelper
         public static void SetCount(uint count)
         {
             if (!GenericHelpers.TryGetAddonByName<AtkUnitBase>("InputNumeric", out var inputNumeric)) {
-                Svc.PluginLog.Error("Input为空");
+                Svc.Log.Error("Input为空");
             } else {
                 Callback.Fire(inputNumeric, true, count);
             }
@@ -191,7 +191,7 @@ public unsafe class AddonTradeHelper
         public static void ClearSlot(int slotIndex)
         {
             if (!GenericHelpers.TryGetAddonByName<AtkUnitBase>("Trade", out var addon)) {
-                Svc.PluginLog.Error("Trade为空");
+                Svc.Log.Error("Trade为空");
             } else {
                 Callback.Fire(addon, true, 3, slotIndex);
             }
@@ -203,7 +203,7 @@ public unsafe class AddonTradeHelper
         public static void PreCheck()
         {
             if (!GenericHelpers.TryGetAddonByName<AtkUnitBase>("Trade", out var addon)) {
-                Svc.PluginLog.Error("Trade为空");
+                Svc.Log.Error("Trade为空");
             } else {
                 Callback.Fire(addon, true, 0, 0);
             }
@@ -212,7 +212,7 @@ public unsafe class AddonTradeHelper
         public static void FinalCheck(bool confirm = true)
         {
             if (!GenericHelpers.TryGetAddonByName<AtkUnitBase>("SelectYesno", out var addon)) {
-                Svc.PluginLog.Error("SelectYesno为空");
+                Svc.Log.Error("SelectYesno为空");
             } else {
                 Callback.Fire(addon, true, confirm ? 0 : 1);
             }

@@ -26,7 +26,7 @@ public unsafe sealed class Main : IWindow
             {
                 var obj = (ITabPage?)Activator.CreateInstance(x, cashier);
                 if (obj is null) {
-                    Svc.PluginLog.Error($"Failed to create instance of {x.Name}");
+                    Svc.Log.Error($"Failed to create instance of {x.Name}");
                 } else {
                     TabList.Add(obj);
                 }

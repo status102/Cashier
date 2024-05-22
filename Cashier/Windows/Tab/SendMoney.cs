@@ -319,7 +319,7 @@ public sealed class SendMoney : TabConfigBase, ITabPage
             return;
         }
         if (!_tradePlan.ContainsKey(objectId)) {
-            Svc.PluginLog.Warning("交易完成，但是找不到对应的交易计划");
+            Svc.Log.Warning("交易完成，但是找不到对应的交易计划");
         } else {
             _tradePlan[objectId] -= (int)money;
             if (_tradePlan[objectId] <= 0) {
