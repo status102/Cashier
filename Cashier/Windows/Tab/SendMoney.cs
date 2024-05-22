@@ -43,7 +43,7 @@ public sealed class SendMoney : TabConfigBase, ITabPage
     private bool _isRunning;
     private uint _lastTradeObjectId;
 
-    private double _allMoney;
+    private double _planAll;
     private long _change;
 
     public SendMoney(Cashier cashier)
@@ -116,14 +116,24 @@ public sealed class SendMoney : TabConfigBase, ITabPage
 
     private void DrawOverallSetting()
     {
+        ImGui.BeginGroup();
+        bool hasPlan = _editPlan.Count > 0;
+        if (!ImGui.Checkbox("##AllHasPlan", ref hasPlan)) {
+        } else if (hasPlan) {
+            foreach (var p in _memberList.Where(p => !_editPlan.ContainsKey(p.ObjectId))) {
+                _editPlan.Add(p.ObjectId, (int)(_planAll * 10000));
+            }
+        } else {
+            _editPlan.Clear();
+        }
+        ImGui.SameLine();
         ImGui.Text("全体: ");
-
         ImGui.BeginDisabled(_isRunning);
         ImGui.SameLine(_nameLength + 60);
         ImGui.SetNextItemWidth(80);
-        ImGui.InputDouble($"w##AllMoney", ref _allMoney, 0, 0, "%.1lf", ImGuiInputTextFlags.CharsDecimal);
+        ImGui.InputDouble($"w##AllMoney", ref _planAll, 0, 0, "%.1lf", ImGuiInputTextFlags.CharsDecimal);
         if (ImGui.IsItemDeactivatedAfterEdit()) {
-            _editPlan.Keys.ToList().ForEach(key => _editPlan[key] = (long)(_allMoney * 10000));
+            _editPlan.Keys.ToList().ForEach(key => _editPlan[key] = (long)(_planAll * 10000));
         }
 
         _change = 0;
@@ -147,12 +157,14 @@ public sealed class SendMoney : TabConfigBase, ITabPage
 
         ImGui.SameLine();
         if (ImGui.Button($"归0##All0")) {
+            _planAll = 0;
             foreach (var key in _editPlan.Keys) {
                 _editPlan[key] = 0;
             };
         }
 
         ImGui.EndDisabled();
+        ImGui.EndGroup();
     }
 
     private void DrawPersonalSetting(Member p)
@@ -164,7 +176,7 @@ public sealed class SendMoney : TabConfigBase, ITabPage
         ImGui.BeginDisabled(_isRunning);
         if (!ImGui.Checkbox($"##{p.FullName}-CheckBox", ref hasPlan)) {
         } else if (hasPlan) {
-            _editPlan.Add(p.ObjectId, (int)(_allMoney * 10000));
+            _editPlan.Add(p.ObjectId, (int)(_planAll * 10000));
         } else {
             _editPlan.Remove(p.ObjectId);
         }
