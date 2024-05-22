@@ -360,10 +360,10 @@ public unsafe class Trade
     private static SeStringBuilder BuildTradeSeString(DalamudLinkPayload? payload, bool status, TradeTarget target, TradeItem[][] items, uint[] gil)
     {
         if (items.Length == 0 || gil.Length == 0) {
-            return new SeStringBuilder().AddText($"[{Cashier.PluginName}]").AddUiForeground("获取交易内容失败", 17);
+            return new SeStringBuilder().AddText($"[{Cashier.Name}]").AddUiForeground("获取交易内容失败", 17);
         }
         var builder = new SeStringBuilder()
-            .AddUiForeground($"[{Cashier.PluginName}]", 45)
+            .AddUiForeground($"[{Cashier.Name}]", 45)
             .AddText(SeIconChar.ArrowRight.ToIconString());
         if (payload is not null) {
             builder = builder.Add(payload);
@@ -427,7 +427,7 @@ public unsafe class Trade
     {
         if (items.Length == 0 || gil.Length != 2 || multiItems.Length == 0 || multiGil.Length != 2) {
             return new SeStringBuilder()
-                .AddText($"[{Cashier.PluginName}]")
+                .AddText($"[{Cashier.Name}]")
                 .AddUiForeground("获取交易内容失败", 17);
         }
         var builder = BuildTradeSeString(payload, status, target, items, gil);

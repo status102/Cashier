@@ -10,7 +10,7 @@ namespace Cashier.Commons
             // 17 红 #DC0000
             // 508 粉红 #FF8080
             var builder = new SeStringBuilder()
-                .AddUiForeground($"[{Cashier.PluginName}]", 45)
+                .AddUiForeground($"[{Cashier.Name}]", 45)
                 .AddUiForeground(msg, 508);
             Svc.ChatGui.PrintError(builder.BuiltString);
         }
@@ -19,14 +19,14 @@ namespace Cashier.Commons
         {
             // 62 黄 #F5EB67
             var builder = new SeStringBuilder()
-                .AddUiForeground($"[{Cashier.PluginName}]", 45)
+                .AddUiForeground($"[{Cashier.Name}]", 45)
                 .AddUiForeground(msg, 62);
             Svc.ChatGui.Print(builder.BuiltString);
         }
         public static void PrintMsg(string msg)
         {
             var builder = new SeStringBuilder()
-                .AddUiForeground($"[{Cashier.PluginName}]", 45)
+                .AddUiForeground($"[{Cashier.Name}]", 45)
                 .AddUiForeground(msg, 1);
             Svc.ChatGui.Print(builder.BuiltString);
 
@@ -35,7 +35,7 @@ namespace Cashier.Commons
         public static void PrintLog(string msg)
         {
             var builder = new SeStringBuilder()
-                .AddUiForeground($"[{Cashier.PluginName}]", 45)
+                .AddUiForeground($"[{Cashier.Name}]", 45)
                 .AddText(msg);
             Svc.ChatGui.Print(builder.BuiltString);
 

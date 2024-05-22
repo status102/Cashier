@@ -11,18 +11,19 @@ using Chat = Cashier.Commons.Chat;
 namespace Cashier;
 public unsafe sealed class Cashier : IDalamudPlugin
 {
-    public static TaskManager? TaskManager { get; private set; }
-    public static string PluginName { get; } = "Cashier";
     public static string Name { get; } = "Cashier";
     private const string commandName = "/ca";
+
     public static Cashier? Instance { get; private set; }
+    public DalamudPluginInterface PluginInterface { get; init; }
+    public PluginUI PluginUi { get; init; }
+    public Configuration Config { get; init; }
+    public static TaskManager? TaskManager { get; private set; }
+
     public History History { get; init; }
     public Trade Trade { get; init; }
     public Setting Setting { get; init; }
     public Main Main { get; init; }
-    public PluginUI PluginUi { get; init; }
-    public Configuration Config { get; init; }
-    public DalamudPluginInterface PluginInterface { get; init; }
     public HookHelper HookHelper { get; init; }
 
     public Cashier(DalamudPluginInterface pluginInterface)
