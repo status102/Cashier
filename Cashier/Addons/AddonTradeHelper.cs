@@ -18,6 +18,72 @@ namespace Cashier.Addons;
 public unsafe class AddonTradeHelper
 {
     private static TaskManager TaskManager => Cashier.TaskManager!;
+    private static readonly Random Random = new(DateTime.Now.Millisecond);
+    private static int RandomDelay => Random.Next(100, 300);
+    public static readonly InventoryType[] InventoryTypes = [InventoryType.Inventory1, InventoryType.Inventory2, InventoryType.Inventory3, InventoryType.Inventory4];
+
+    public static void TradeItem(uint itemId, uint count)
+    {
+        var inventoryManager = InventoryManager.Instance();
+        if (inventoryManager is null) {
+            Svc.PluginLog.Error("InventoryManager is null");
+            return;
+        }
+        var foundType = InventoryTypes.Where(i => inventoryManager->GetItemCountInContainer(itemId, i) != 0).ToList();
+        if (foundType.Count == 0) {
+            Svc.PluginLog.Error("背包里没找到");
+            return;
+        }
+
+        var container = inventoryManager->GetInventoryContainer(foundType.First());
+        if (container == null) {
+            Svc.PluginLog.Error("container获取失败");
+            return;
+        }
+
+        int? foundSlot = null;
+        for (var i = 0; i < container->Size; i++) {
+            var slot = container->GetInventorySlot(i);
+            if (slot->ItemID == itemId) {
+                foundSlot = i;
+                break;
+            }
+        }
+        if (foundSlot == null) {
+            Svc.PluginLog.Error("foundSlot失败");
+            return;
+        }
+
+
+        var agentInventory = AgentModule.Instance()->GetAgentByInternalId(AgentId.Inventory);
+        if (agentInventory == null) {
+            Svc.PluginLog.Error("背包获取失败");
+            return;
+        }
+        AgentInventoryContext.Instance()->OpenForItemSlot(foundType.First(), (int)foundSlot, agentInventory->AddonId);
+
+        TaskManager.DelayNext(RandomDelay);
+        TaskManager.Enqueue(() => Addon.TryClickContextMenuEntry("交易"));
+        TaskManager.DelayNext(RandomDelay);
+        TaskManager.Enqueue(() => Step.SetCount(count));
+    }
+
+    public static void TradeItem(InventoryType type, int slot, uint count)
+    {
+        var agentInventory = AgentModule.Instance()->GetAgentByInternalId(AgentId.Inventory);
+        if (agentInventory == null) {
+            Svc.PluginLog.Error("AgentModule.GetAgentByInternalId(AgentId.Inventory) is null");
+            return;
+        }
+        AgentInventoryContext.Instance()->OpenForItemSlot(type, slot, agentInventory->AddonId);
+
+        TaskManager.DelayNextImmediate(RandomDelay);
+        TaskManager.EnqueueImmediate(() => Addon.TryClickContextMenuEntry("交易"));
+        if (count > 1) {
+            TaskManager.DelayNextImmediate(RandomDelay);
+            TaskManager.EnqueueImmediate(() => Step.SetCount(count));
+        }
+    }
 
     /// <summary>
     /// 向某人申请交易
@@ -96,57 +162,6 @@ public unsafe class AddonTradeHelper
 
     public static class Step
     {
-        private static readonly InventoryType[] InventoryTypes = [InventoryType.Inventory1, InventoryType.Inventory2, InventoryType.Inventory3, InventoryType.Inventory4];
-
-        public static void TradeItem(uint itemId, uint count)
-        {
-            var agent = AgentInventoryContext.Instance();
-            if (agent == null) {
-                Svc.PluginLog.Error("获取InventoryContext失败");
-                return;
-            }
-            var inventoryManager = InventoryManager.Instance();
-            if (inventoryManager == null) {
-                Svc.PluginLog.Error("获取InventoryManager失败");
-                return;
-            }
-            var foundType = InventoryTypes.Where(i => inventoryManager->GetItemCountInContainer(itemId, i) != 0).ToList();
-            if (foundType.Count == 0) {
-                Svc.PluginLog.Error("背包里没找到");
-                return;
-            }
-            var agentInventory = AgentModule.Instance()->GetAgentByInternalId(AgentId.Inventory);
-            if (agentInventory == null) {
-                Svc.PluginLog.Error("背包获取失败");
-                return;
-            }
-
-            var container = inventoryManager->GetInventoryContainer(foundType.First());
-            if (container == null) {
-                Svc.PluginLog.Error("container获取失败");
-                return;
-            }
-
-            int? foundSlot = null;
-            for (var i = 0; i < container->Size; i++) {
-                var slot = container->GetInventorySlot(i);
-                if (slot->ItemID == itemId) {
-                    foundSlot = i;
-                    break;
-                }
-            }
-            if (foundSlot == null) {
-                Svc.PluginLog.Error("foundSlot失败");
-                return;
-            }
-
-            agent->OpenForItemSlot(foundType.First(), (int)foundSlot, agentInventory->AddonId);
-
-            TaskManager.DelayNext(50);
-            TaskManager.Enqueue(() => Addon.TryClickContextMenuEntry("交易"));
-            TaskManager.DelayNext(50);
-            TaskManager.Enqueue(() => SetCount(count));
-        }
 
         /// <summary>
         /// 点击交易窗己方金币栏

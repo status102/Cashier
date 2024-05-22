@@ -1,5 +1,4 @@
 ﻿using Cashier.Commons;
-using Cashier.Windows;
 using Dalamud.Game.Network;
 using Dalamud.Interface.Internal;
 using System;
@@ -8,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using static Dalamud.Plugin.Services.ITextureProvider;
 
 namespace Cashier
 {
@@ -17,10 +17,6 @@ namespace Cashier
         private readonly static int[] blackList = [673, 379, 521, 572, 113, 241, 280, 169, 504, 642, 911, 365];
 
         private readonly static Dictionary<long, IDalamudTextureWrap?> iconList = [];
-        public History History { get; init; }
-        public Trade Trade { get; init; }
-        public Setting Setting { get; init; }
-        public Main Main { get; init; }
 
         //public AtkArrayDataHolder* atkArrayDataHolder { get; init; } = null;
 
@@ -28,11 +24,6 @@ namespace Cashier
 
         public unsafe PluginUI(Cashier cashier)
         {
-            Trade = new(cashier);
-            History = new(cashier);
-            Setting = new(cashier);
-            Main = new(cashier);
-
             //var atkArrayDataHolder = &Framework.Instance()->GetUiModule()->GetRaptureAtkModule()->AtkModule.AtkArrayDataHolder;
             //if (atkArrayDataHolder != null && atkArrayDataHolder->StringArrayCount > 0) { this.atkArrayDataHolder = atkArrayDataHolder; }
 #if DEBUG
@@ -45,10 +36,6 @@ namespace Cashier
 #if DEBUG
             Svc.GameNetwork.NetworkMessage -= NetworkMessageDelegate;
 #endif
-            Trade.Dispose();
-            Setting.Dispose();
-            History.Dispose();
-            Main.Dispose();
 
             if (networkMessageWriter != null) {
                 networkMessageWriter.Flush();
@@ -59,26 +46,6 @@ namespace Cashier
 
         public void Draw()
         {
-            try {
-                Trade?.Draw();// 有问题
-            } catch (Exception e) {
-                Svc.PluginLog.Warning("Trade.Draw出错\n" + e);
-            }
-            try {
-                Main?.Draw();
-            } catch (Exception e) {
-                Svc.PluginLog.Warning("Main.Draw出错\n" + e);
-            }
-            try {
-                History?.Draw();
-            } catch (Exception e) {
-                Svc.PluginLog.Warning("History.Draw出错\n" + e);
-            }
-            try {
-                Setting?.Draw();
-            } catch (Exception e) {
-                Svc.PluginLog.Warning("Setting.Draw出错\n" + e);
-            }
         }
 
         public unsafe void NetworkMessageDelegate(IntPtr dataPtr, ushort opcode, uint sourceActorId, uint targetActorId, NetworkMessageDirection direction)
@@ -107,24 +74,28 @@ namespace Cashier
             }
         }
 
-        public static IDalamudTextureWrap? GetIcon(uint iconId, bool isHq = false)
+        public static IDalamudTextureWrap? GetIcon(uint iconId, bool quality = false)
         {
             if (iconId == 0) {
                 return null;
             }
-            long id = iconId;
-            if (isHq) {
-                id = -id;
-            }
-            if (iconList.TryGetValue(id, out var iconValue)) {
+
+            long cacheId = quality ? -iconId : iconId;
+            if (iconList.TryGetValue(cacheId, out var iconValue)) {
                 return iconValue;
             }
-            IDalamudTextureWrap? icon = Svc.TextureProvider.GetTextureFromGame(string.Format("ui/icon/{0:D3}000/{1}{2:D6}_hr1.tex", iconId / 1000u, isHq ? "hq/" : "", iconId));
-            if (icon == null) {
-                return null;
+
+            var flag = IconFlags.HiRes;
+            if (quality) {
+                flag |= IconFlags.ItemHighQuality;
             }
-            iconList.Add(id, icon);
-            return icon;
+
+            if (Svc.TextureProvider.GetIcon(iconId, flag) is { } icon) {
+                iconList.Add(cacheId, icon);
+                return icon;
+            }
+
+            return null;
         }
     }
 }

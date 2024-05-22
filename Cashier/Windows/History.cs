@@ -309,12 +309,12 @@ public sealed class History : IWindow
     public History(Cashier cashier)
     {
         _cashier = cashier;
-        _cashier.PluginUi.Trade.OnTradeFinishedOutput += AddHistory;
+        _cashier.Trade.OnTradeFinishedOutput += AddHistory;
         Task.Run(ReadHistory);
     }
     public void Dispose()
     {
-        _cashier.PluginUi.Trade.OnTradeFinishedOutput -= AddHistory;
+        _cashier.Trade.OnTradeFinishedOutput -= AddHistory;
         if (isHistoryChanged) {
             SaveHistory();
         }

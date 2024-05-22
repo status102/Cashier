@@ -9,7 +9,6 @@ namespace Cashier.Commons;
 public sealed class HookHelper : IDisposable
 {
     private readonly Cashier _cashier;
-    private Trade? Trade => _cashier.PluginUi?.Trade;
     private bool _isDisposed;
 
     public delegate void TradeBegined(nint objectId);

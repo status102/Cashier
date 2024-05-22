@@ -32,9 +32,9 @@ public static class RecordItemExtensions
 {
     public static IEnumerable<RecordItem> Convert(this IEnumerable<TradeItem> source)
     {
-        return source.Where(i => i.Id != 0).GroupBy(i => i.Id * (i.Quality ? -1 : 1)).Select(i =>
+        return source.Where(i => i.ItemId != 0).GroupBy(i => i.ItemId * (i.Quality ? -1 : 1)).Select(i =>
         {
-            var item = new RecordItem(i.First().Id, i.First().Name, i.First().IconId, i.First().StackSize);
+            var item = new RecordItem(i.First().ItemId, i.First().Name, i.First().IconId, i.First().StackSize);
             foreach (var item1 in i) {
                 item.HqCount += item1.Quality ? item1.Count : 0;
             }

@@ -47,7 +47,7 @@ namespace Cashier.Commons
 				return false;
 			}
 			if (!TryScanContextMenuText(addon, text, out var index)) {
-				Svc.PluginLog.Error($"ContextMenu内未找到包含[{text}]的选项，已关闭ContextMenu");
+				Svc.PluginLog.Error($"ContextMenu内未找到包含[{text}]的选项，关闭ContextMenu");
 				addon->FireCloseCallback();
 				addon->Close(true);
 				return false;

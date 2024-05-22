@@ -6,7 +6,7 @@ namespace Cashier.Model
 {
     public class TradeItem
     {
-        public uint Id { get; private init; } = 0;
+        public uint ItemId { get; private init; } = 0;
         public int Count { get; set; } = 0;
         public bool Quality { get; init; } = false;
         public ushort IconId { get; init; } = 0;
@@ -19,7 +19,7 @@ namespace Cashier.Model
         public TradeItem() { }
         public TradeItem(uint id, int count = 1, bool quality = false)
         {
-            Id = id;
+            ItemId = id;
             Count = count;
             Quality = quality;
             var item = Svc.DataManager.GetExcelSheet<Item>()?.FirstOrDefault(r => r.RowId == id);

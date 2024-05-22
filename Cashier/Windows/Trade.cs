@@ -172,7 +172,7 @@ public unsafe class Trade
             // 显示当前交易对象的记录
             ImGui.SameLine();
             if (ImGuiComponents.IconButton(FontAwesomeIcon.History)) {
-                _cashier.PluginUi.History.Show($"{Target.PlayerName}@{Target.WorldName}");
+                _cashier.History.Show($"{Target.PlayerName}@{Target.WorldName}");
             }
             if (ImGui.IsItemHovered()) {
                 ImGui.SetTooltip("显示当前交易对象的交易记录");
@@ -181,7 +181,7 @@ public unsafe class Trade
             // 显示设置窗口
             ImGui.SameLine();
             if (ImGuiComponents.IconButton(FontAwesomeIcon.Cog)) {
-                _cashier.PluginUi.Setting.Show();
+                _cashier.Setting.Show();
             }
 
             DrawTradeTable(_tradeItemList[0], _tradeGil[0]);
@@ -220,7 +220,7 @@ public unsafe class Trade
                 ImGui.TableNextRow(ImGuiTableRowFlags.None, Row_Height);
                 ImGui.TableNextColumn();
 
-                if (items[i].Id == 0) {
+                if (items[i].ItemId == 0) {
                     continue;
                 }
                 var icon = PluginUI.GetIcon(items[i].IconId, items[i].Quality);
@@ -301,7 +301,7 @@ public unsafe class Trade
     private void Finish(bool status)
     {
         var recordList = _tradeItemList.Select(i => i.Convert().ToArray()).ToArray();
-        var list = _tradeItemList.Select(i => i.Where(j => j.Id != 0).ToArray()).ToArray();
+        var list = _tradeItemList.Select(i => i.Where(j => j.ItemId != 0).ToArray()).ToArray();
         OnTradeFinishedOutput?.Invoke(Target, status, _tradeGil, list);
 
         if (LastTarget != Target) {
@@ -390,7 +390,7 @@ public unsafe class Trade
                     builder.AddText(", ");
                 }
                 var name = items[0][i].Name + (items[0][i].Quality ? SeIconChar.HighQuality.ToIconString() : string.Empty) + "x" + items[0][i].Count;
-                builder.AddItemLink(items[0][i].Id, items[0][i].Quality, name)
+                builder.AddItemLink(items[0][i].ItemId, items[0][i].Quality, name)
                     .Add(RawPayload.LinkTerminator);
             }
         }
@@ -406,7 +406,7 @@ public unsafe class Trade
                     builder.AddText(", ");
                 }
                 var name = items[1][i].Name + (items[1][i].Quality ? SeIconChar.HighQuality.ToIconString() : string.Empty) + "x" + items[1][i].Count;
-                builder.AddItemLink(items[1][i].Id, items[1][i].Quality, name)
+                builder.AddItemLink(items[1][i].ItemId, items[1][i].Quality, name)
                     .Add(RawPayload.LinkTerminator);
             }
         }
@@ -513,7 +513,7 @@ public unsafe class Trade
     {
         var payload = (PlayerPayload?)str.Payloads.Find(i => i.Type == PayloadType.Player);
         if (payload != null) {
-            _cashier.PluginUi.History.Show(payload.PlayerName + "@" + payload.World.Name.RawString);
+            _cashier.History.Show(payload.PlayerName + "@" + payload.World.Name.RawString);
         } else {
             Chat.PrintError("未找到交易对象");
             Svc.PluginLog.Verbose($"未找到交易对象，data=[{str.ToJson()}]");
@@ -551,7 +551,7 @@ public unsafe class Trade
         }
         IsTrading = false;
         _refreshTimer.Stop();
-        _cashier.PluginUi.Main.Get<SendMoney>()?.OnTradeCancelled();
+        _cashier.Main.Get<SendMoney>()?.OnTradeCancelled();
         Finish(false);
     }
 
@@ -564,7 +564,7 @@ public unsafe class Trade
         }
         IsTrading = false;
         _refreshTimer.Stop();
-        _cashier.PluginUi.Main.Get<SendMoney>()?.OnTradeFinished(Target.ObjectId, _tradeGil[0]);
+        _cashier.Main.Get<SendMoney>()?.OnTradeFinished(Target.ObjectId, _tradeGil[0]);
         Finish(true);
     }
 
@@ -575,7 +575,7 @@ public unsafe class Trade
             Svc.PluginLog.Warning("未开始交易时进入最终确认");
             return;
         }
-        _cashier.PluginUi.Main.Get<SendMoney>()?.OnTradeFinalChecked(Target.ObjectId, _tradeGil[0]);
+        _cashier.Main.Get<SendMoney>()?.OnTradeFinalChecked(Target.ObjectId, _tradeGil[0]);
     }
 
     public void RefreshData()
@@ -602,7 +602,7 @@ public unsafe class Trade
             }
         }
         for (int i = 0; i < 10; i++) {
-            if (IsTrading && _tradeItemList[i < 5 ? 0 : 1][i % 5] is TradeItem { Id: > 0 } item) {
+            if (IsTrading && _tradeItemList[i < 5 ? 0 : 1][i % 5] is TradeItem { ItemId: > 0 } item) {
                 item.Count = getCount(AddonIndex[i], i < 5);
             }
         }
