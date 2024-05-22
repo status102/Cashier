@@ -659,11 +659,15 @@ public unsafe class Trade
     /// <param name="isPlayer1">是否为玩家1(自己)</param>
     private void OnTradePreCheckChanged(nint objectId, bool confirmed)
     {
+        if (!IsTrading) {
+            return;
+        }
         if (objectId == Svc.ClientState.LocalPlayer!.ObjectId) {
             _tradePlayerConfirm[0] = confirmed;
-        } else {
+            _cashier.Main.Get<SendMoney>()?.OnTradePreCheckChanged(Target.ObjectId, _tradePlayerConfirm, _tradeGil[0]);
+        } else if(objectId == Target.ObjectId) {
             _tradePlayerConfirm[1] = confirmed;
-            _cashier.PluginUi.Main.Get<SendMoney>()?.OnTradePreCheckChanged(Target.ObjectId, confirmed, _tradeGil[0]);
+            _cashier.Main.Get<SendMoney>()?.OnTradePreCheckChanged(Target.ObjectId, _tradePlayerConfirm, _tradeGil[0]);
         }
     }
 }

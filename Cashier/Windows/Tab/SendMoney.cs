@@ -22,7 +22,7 @@ public sealed class SendMoney : TabConfigBase, ITabPage
     public string TabName { get; } = "自动打钱";
     public bool Hide { get; }
     private readonly Cashier _cashier;
-    private Trade Trade => _cashier.PluginUi.Trade;
+    private Trade Trade => _cashier.Trade;
     private readonly new Configuration Config;
     private static TaskManager TaskManager => Cashier.TaskManager!;
     private int RandomDelay => Random.Next(200, 500);
@@ -30,20 +30,21 @@ public sealed class SendMoney : TabConfigBase, ITabPage
     private const uint Maximum_Gil_Per_Times = 1_000_000;
     private readonly TeamHelper _teamHelper = new();
     private readonly Timer _selectPlayerTimer = new(1_000) { AutoReset = true };
-    private readonly object _lock = new();
-
 
     private int[] MoneyButton = [-50, -10, 10, 50];
+    private float _nameLength;
+    private bool _enhance = true;
 
     private Dictionary<uint, long> _editPlan = [];
     private Dictionary<uint, long> _tradePlan = [];
     private List<Member> _memberList = [];
-    private bool _enhance = true;
-    private bool _isRunning = false;
+    private bool[] _preCheckStatus = [];
+
+    private bool _isRunning;
+    private uint _lastTradeObjectId;
+
     private double _allMoney;
     private long _change;
-    private uint _lastTradeObjectId;
-    private float _nameLength;
 
     public SendMoney(Cashier cashier)
     {
@@ -238,7 +239,7 @@ public sealed class SendMoney : TabConfigBase, ITabPage
         }
 
         // Linq.Max在list为空时报错
-        _nameLength = Math.Max((int)ImGui.CalcTextSize("全体: ").X, _memberList.Select(p => (int)ImGui.CalcTextSize(p.FullName).X).Append(0).Max());
+        _nameLength = _memberList.Select(p => ImGui.CalcTextSize(p.FullName).X).Append(ImGui.CalcTextSize("全体: ").X).Max();
     }
 
     private unsafe void AddTargetPlayer()
@@ -250,7 +251,7 @@ public sealed class SendMoney : TabConfigBase, ITabPage
             }
             _memberList.Add(new(player));
             _editPlan.TryAdd(player.ObjectId, 0);
-            _nameLength = Math.Max((int)ImGui.CalcTextSize("全体: ").X, _memberList.Select(p => (int)ImGui.CalcTextSize(p.FullName).X).Append(0).Max());
+            _nameLength = _memberList.Select(p => ImGui.CalcTextSize(p.FullName).X).Append(ImGui.CalcTextSize("全体: ").X).Max();
         }
     }
 
@@ -265,7 +266,6 @@ public sealed class SendMoney : TabConfigBase, ITabPage
         _selectPlayerTimer.Stop();
         TaskManager.Abort();
         _lastTradeObjectId = Trade.Target.ObjectId;
-        //lock (_lock) {
         if (!_tradePlan.TryGetValue(_lastTradeObjectId, out var value)) {
             TaskManager.DelayNext(RandomDelay);
             TaskManager.Enqueue(AddonTradeHelper.Cancel);
@@ -273,22 +273,23 @@ public sealed class SendMoney : TabConfigBase, ITabPage
             TaskManager.DelayNext(RandomDelay);
             TaskManager.Enqueue(() => SetGil(value >= Maximum_Gil_Per_Times ? Maximum_Gil_Per_Times : (uint)value));
             TaskManager.DelayNext(RandomDelay);
-            TaskManager.Enqueue(AddonTradeHelper.Step.PreCheck);
+            TaskManager.Enqueue(ConfirmPreCheck);
         }
-        //}
     }
 
-    public void OnTradePreCheckChanged(uint objectId, bool confirm, uint money)
+    public void OnTradePreCheckChanged(uint objectId, bool[] confirm, uint money)
     {
-        if (!_isRunning || !confirm) {
+        if (!_isRunning) {
             return;
         }
+        _preCheckStatus = confirm;
         if (!_tradePlan.TryGetValue(objectId, out var value)) {
             TaskManager.DelayNext(RandomDelay);
             TaskManager.Enqueue(AddonTradeHelper.Cancel);
-        } else if (money <= value) {
+            return;
+        } else if (money <= value && !confirm[0] && confirm[1]) {
             TaskManager.DelayNext(RandomDelay);
-            TaskManager.Enqueue(AddonTradeHelper.Step.PreCheck);
+            TaskManager.Enqueue(ConfirmPreCheck);
         }
     }
 
@@ -297,13 +298,11 @@ public sealed class SendMoney : TabConfigBase, ITabPage
         if (!_isRunning) {
             return;
         }
-        //lock (_lock) {
         if (!_tradePlan.TryGetValue(objectId, out var value)) {
         } else if (money <= value) {
             TaskManager.DelayNext(RandomDelay);
             TaskManager.Enqueue(() => AddonTradeHelper.Step.FinalCheck());
         }
-        //}
     }
 
     public void OnTradeCancelled()
@@ -319,9 +318,8 @@ public sealed class SendMoney : TabConfigBase, ITabPage
         if (!_isRunning) {
             return;
         }
-        //lock (_lock) {
         if (!_tradePlan.ContainsKey(objectId)) {
-            Commons.Chat.PrintError("交易完成，但是找不到对应的交易计划");
+            Svc.PluginLog.Warning("交易完成，但是找不到对应的交易计划");
         } else {
             _tradePlan[objectId] -= (int)money;
             if (_tradePlan[objectId] <= 0) {
@@ -329,7 +327,6 @@ public sealed class SendMoney : TabConfigBase, ITabPage
                 _editPlan.Remove(objectId);
             }
         }
-        //}
         _selectPlayerTimer.Start();
         if (_tradePlan.Count == 0) {
             Stop();
@@ -355,11 +352,18 @@ public sealed class SendMoney : TabConfigBase, ITabPage
             AddonTradeHelper.Step.SetCount(money);
         }
     }
+
+    private void ConfirmPreCheck()
+    {
+        if (!_preCheckStatus[0]) {
+            AddonTradeHelper.Step.PreCheck();
+            _preCheckStatus[0] = true;
+        }
+    }
+
     /// <summary>
     /// 遍历交易计划发起交易申请Tick
     /// </summary>
-    /// <param name="sender"></param>
-    /// <param name="e"></param>
     private void AutoRequestTradeTick(object? sender, ElapsedEventArgs? e)
     {
         if (!_isRunning || _tradePlan.Count == 0) {
